@@ -1,1 +1,729 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central de Demandas — IFPI Campus Paulistana</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+  <header id="global-header" class="topbar hidden">
+    <div class="header-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="2" width="5" height="5" rx="1" fill="#38A169"/>
+        <rect x="2" y="9" width="5" height="5" rx="1" fill="#38A169"/>
+        <rect x="2" y="16" width="5" height="5" rx="1" fill="#38A169"/>
+        <rect x="9" y="2" width="5" height="5" rx="1" fill="#38A169"/>
+        <rect x="9" y="9" width="5" height="5" rx="1" fill="#38A169"/>
+        <rect x="9" y="16" width="5" height="5" rx="1" fill="#38A169"/>
+        <rect x="16" y="2" width="5" height="5" rx="1" fill="#E53E3E"/>
+        <rect x="16" y="9" width="5" height="5" rx="1" fill="#38A169"/>
+        <rect x="16" y="16" width="5" height="5" rx="1" fill="#38A169"/>
+      </svg>
+      <span>IFPI Central de Demandas da Coordenação</span>
+    </div>
+    <div class="nav-links">
+      <button id="nav-home" class="active" onclick="navegarPara('dashboard-page')">Página Inicial</button>
+      <button id="nav-aluno" onclick="abrirAbaAluno('nova')">Área do Aluno</button>
+      <button id="nav-coord" onclick="navegarPara('coordenacao-page')">Painel da Coordenação</button>
+      
+      <div style="position: relative; display: inline-block;">
+        <button onclick="toggleNotificacoes()" class="btn-icon" style="background:none; border:none; cursor:pointer; font-size:1.1rem; padding: 0 4px;">🔔</button>
+        <div id="popover-notificacoes" class="notif-popover hidden">
+          <div class="notif-header">Notificações</div>
+          <div class="notif-item">
+            <span class="dot red"></span>
+            <div>Nova solicitação de alta prioridade recebida (#2026-023)<br><small>Agora</small></div>
+          </div>
+          <div class="notif-item">
+            <span class="dot blue"></span>
+            <div>Solicitação #2026-015 atualizada para Em Andamento<br><small>5 min</small></div>
+          </div>
+          <div class="notif-item">
+            <span class="dot yellow"></span>
+            <div>3 solicitações aguardam análise há mais de 24h<br><small>1h</small></div>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="fazerLogout()" class="btn-logout">🚪</button>
+    </div>
+  </header>
+
+  <div id="login-page" class="page active">
+    <div class="login-container">
+      <div class="login-sidebar">
+        <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="2" width="5" height="5" rx="1" fill="#38A169"/>
+            <rect x="2" y="9" width="5" height="5" rx="1" fill="#38A169"/>
+            <rect x="2" y="16" width="5" height="5" rx="1" fill="#38A169"/>
+            <rect x="9" y="2" width="5" height="5" rx="1" fill="#38A169"/>
+            <rect x="9" y="9" width="5" height="5" rx="1" fill="#38A169"/>
+            <rect x="9" y="16" width="5" height="5" rx="1" fill="#38A169"/>
+            <rect x="16" y="2" width="5" height="5" rx="1" fill="#E53E3E"/>
+            <rect x="16" y="9" width="5" height="5" rx="1" fill="#38A169"/>
+            <rect x="16" y="16" width="5" height="5" rx="1" fill="#38A169"/>
+          </svg>
+          IFPI Campus Paulistana
+        </div>
+        <div class="hero-text">
+          <h1>Demandas acadêmicas em um só lugar.</h1>
+          <p>Uma comunicação mais simples, transparente e eficiente entre estudantes e coordenação.</p>
+        </div>
+        <div class="footer-info">Instituto Federal do Piauí</div>
+      </div>
+
+      <div class="login-form-wrapper">
+        <div class="login-card">
+          <h2>Central de Demandas</h2>
+          <p class="subtitle">Entre com seus dados para continuar</p>
+
+          <form onsubmit="fazerLogin(event)">
+            <div id="login-erro" class="hidden" style="background: #fee2e2; color: #b91c1c; padding: 0.6rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 1rem; text-align: center; font-weight: 500;">
+              Matrícula ou senha incorretas! Acesso restrito.
+            </div>
+
+            <div class="form-group">
+              <label for="matricula">Matrícula</label>
+              <div class="input-icon-wrapper">
+                <span class="icon">👤</span>
+                <input type="text" id="matricula" placeholder="Digite sua matrícula">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="senha">Senha</label>
+              <div class="input-icon-wrapper">
+                <span class="icon">🔒</span>
+                <input type="password" id="senha" placeholder="Digite sua senha">
+              </div>
+              <a href="#" class="forgot-link">Esqueci minha senha</a>
+            </div>
+
+            <button type="submit" class="btn-submit">Entrar</button>
+
+            <div style="font-size: 0.725rem; color: #9ca3af; text-align: center; margin-top: 1.5rem;">
+              Acesso destinado aos usuários autorizados do IFPI
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dashboard-page" class="page">
+    <main class="main-content">
+      <div class="status-badge">
+        <span class="status-pill">• Sistema Ativo — IFPI Campus Paulistana</span>
+      </div>
+
+      <div class="dashboard-title">
+        <h2>Central de Demandas<br>da Coordenação</h2>
+        <p>Registre, acompanhe e resolva suas demandas acadêmicas de forma transparente e eficiente.</p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="action-card">
+          <div class="card-icon bg-green">📄</div>
+          <h3>Nova Solicitação</h3>
+          <p>Registre um problema ou dúvida diretamente para a coordenação.</p>
+          <a href="#" onclick="abrirAbaAluno('nova')">Abrir formulário &gt;</a>
+        </div>
+
+        <div class="action-card">
+          <div class="card-icon bg-blue">🔍</div>
+          <h3>Acompanhar Solicitação</h3>
+          <p>Consulte o status da sua demanda usando o código de protocolo.</p>
+          <a href="#" onclick="abrirAbaAluno('acompanhar')">Buscar protocolo &gt;</a>
+        </div>
+
+        <div class="action-card">
+          <div class="card-icon bg-purple">📊</div>
+          <h3>Painel da Coordenação</h3>
+          <p>Acesse métricas, fila inteligente e gerencie as demandas.</p>
+          <a href="#" onclick="navegarPara('coordenacao-page')">Acessar painel &gt;</a>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-item"><div class="number">24</div><div class="label">Solicitações Abertas</div></div>
+        <div class="stat-item"><div class="number">7</div><div class="label">Alta Prioridade</div></div>
+        <div class="stat-item"><div class="number">12</div><div class="label">Em Andamento</div></div>
+        <div class="stat-item"><div class="number">5</div><div class="label">Resolvidas Hoje</div></div>
+      </div>
+    </main>
+
+    <footer>Instituto Federal do Piauí — Central de Demandas da Coordenação</footer>
+  </div>
+
+  <div id="aluno-page" class="page">
+    <main class="main-content">
+      
+      <div class="sub-tabs-container">
+        <button id="tab-btn-nova" class="sub-tab-btn active" onclick="mudarSubAba('nova')">Nova Solicitação</button>
+        <button id="tab-btn-acompanhar" class="sub-tab-btn" onclick="mudarSubAba('acompanhar')">Acompanhar</button>
+      </div>
+
+      <div id="secao-nova" class="sub-secao active">
+        <div class="form-box-wrapper">
+          <div class="form-box-header">
+            <h3>Nova Solicitação</h3>
+            <p>Preencha o formulário para registrar sua demanda.</p>
+          </div>
+
+          <form onsubmit="enviarFormulario(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nome Completo</label>
+                <input type="text" placeholder="Ex: João Pedro Carvalho" required>
+              </div>
+              <div class="form-group">
+                <label>Matrícula</label>
+                <input type="text" placeholder="Ex: 20231ADS0001" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Curso</label>
+                <input type="text" placeholder="Ex: Análise e Desenvolvimento de Sistemas" required>
+              </div>
+              <div class="form-group">
+                <label>Turma</label>
+                <input type="text" placeholder="Ex: 2023.1" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Categoria do Problema</label>
+              <div class="chips-container">
+                <button type="button" class="chip active" onclick="ativarChip(this)">Matrícula</button>
+                <button type="button" class="chip" onclick="ativarChip(this)">Questões Acadêmicas</button>
+                <button type="button" class="chip" onclick="ativarChip(this)">Documentação</button>
+                <button type="button" class="chip" onclick="ativarChip(this)">Horários</button>
+                <button type="button" class="chip" onclick="ativarChip(this)">Professores</button>
+                <button type="button" class="chip" onclick="ativarChip(this)">Estrutura</button>
+                <button type="button" class="chip" onclick="ativarChip(this)">Outros</button>
+              </div>
+            </div>
+
+            <div class="priority-box">
+              <span class="priority-box-title">DEFINIÇÃO DE PRIORIDADE</span>
+              
+              <div class="priority-row">
+                <span>Este problema impede atividade acadêmica?</span>
+                <div class="toggle-group" data-qid="q1">
+                  <button type="button" onclick="mudarToggle(this, 'Sim')">Sim</button>
+                  <button type="button" class="active" onclick="mudarToggle(this, 'Nao')">Não</button>
+                </div>
+              </div>
+
+              <div class="priority-row">
+                <span>Tem prazo próximo (menos de 72h)?</span>
+                <div class="toggle-group" data-qid="q2">
+                  <button type="button" onclick="mudarToggle(this, 'Sim')">Sim</button>
+                  <button type="button" class="active" onclick="mudarToggle(this, 'Nao')">Não</button>
+                </div>
+              </div>
+
+              <div class="priority-row">
+                <span>Afeta outras pessoas além de você?</span>
+                <div class="toggle-group" data-qid="q3">
+                  <button type="button" onclick="mudarToggle(this, 'Sim')">Sim</button>
+                  <button type="button" class="active" onclick="mudarToggle(this, 'Nao')">Não</button>
+                </div>
+              </div>
+
+              <div class="priority-result">
+                <span>Prioridade calculada: </span>
+                <strong id="label-prioridade" style="color: #10b981;">Baixa</strong>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Descrição Detalhada</label>
+              <textarea rows="4" placeholder="Descreva seu problema com o máximo de detalhes possível..." required></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Anexos (PDF ou Fotos)</label>
+              <div class="upload-dropzone">
+                <p>Arraste arquivos ou <strong>clique para selecionar</strong></p>
+                <span class="upload-sub">PDF, PNG, JPG (Até 10MB)</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Enviar Solicitação</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="secao-acompanhar" class="sub-secao">
+        <div class="form-box-wrapper" style="max-width: 650px; margin: 0 auto;">
+          <div class="form-box-header">
+            <h3>Acompanhar Solicitação</h3>
+            <p>Consulte o status da sua demanda usando o código de protocolo.</p>
+          </div>
+
+          <div class="form-row" style="align-items: flex-end;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+              <label>Código de Protocolo</label>
+              <input type="text" id="input-protocolo" value="#2026-015" placeholder="Ex: #2026-015">
+              <span style="font-size: 0.75rem; color: #6b7280; margin-top: 4px; display: block;">Tente: #2026-015 para ver o exemplo</span>
+            </div>
+            <button type="button" class="btn-submit" style="width: 110px; margin-top: 0;" onclick="buscarProtocolo()">Buscar</button>
+          </div>
+
+          <div id="resultado-protocolo" class="hidden" style="margin-top: 2rem;">
+            <div class="protocol-card-top">
+              <div>
+                <strong>#2026-015</strong> <span class="badge-alta">Alta</span>
+                <p style="font-size: 0.85rem; color: #4b5563; margin-top: 2px;">João Pedro Carvalho · Análise e Desenvolvimento de Sistemas</p>
+              </div>
+              <span class="badge-andamento">Em Andamento</span>
+            </div>
+
+            <div class="timeline-box">
+              <div class="timeline-item completed">
+                <div class="t-icon">✓</div>
+                <div><strong>Recebido</strong><br><span style="font-size: 0.75rem; color: #6b7280;">20/09/2026 06:32</span></div>
+              </div>
+              <div class="timeline-item completed">
+                <div class="t-icon">✓</div>
+                <div><strong>Em Análise</strong><br><span style="font-size: 0.75rem; color: #6b7280;">20/09/2026 08:05</span></div>
+              </div>
+              <div class="timeline-item active">
+                <div class="t-icon">●</div>
+                <div><strong>Em Andamento</strong><br><span style="font-size: 0.75rem; color: #6b7280;">20/09/2026 09:40</span></div>
+              </div>
+            </div>
+
+            <div class="chat-container">
+              <div class="chat-title">💬 Comunicação com a Coordenação</div>
+              
+              <div id="chat-messages" class="chat-messages">
+                <div class="chat-bubble coord">
+                  <strong>Coordenação</strong>
+                  <p>Olá! Recebemos sua solicitação e estamos verificando o problema no SIGAA. Aguarde.</p>
+                  <span class="time">09:15</span>
+                </div>
+
+                <div class="chat-bubble aluno">
+                  <strong>Você</strong>
+                  <p>Obrigado! O problema persiste. Preciso acessar até sexta para verificar minhas frequências.</p>
+                  <span class="time">09:32</span>
+                </div>
+              </div>
+
+              <div class="chat-input-row">
+                <input type="text" id="chat-txt" placeholder="Escreva uma mensagem...">
+                <button type="button" onclick="enviarMensagemChat()">➤</button>
+              </div>
+            </div>
+
+            <div class="anexos-box">
+              <span style="font-size: 0.8rem; font-weight: bold; color: #374151; display: block; margin-bottom: 0.5rem;">Anexos</span>
+              <div class="anexo-item">
+                <span>📎 print_sigaa_erro.png</span>
+                <a href="#" onclick="alert('A descarregar print_sigaa_erro.png...')">Baixar</a>
+              </div>
+              <div class="anexo-item">
+                <span>📎 comprovante_matricula.pdf</span>
+                <a href="#" onclick="alert('A descarregar comprovante_matricula.pdf...')">Baixar</a>
+              </div>
+            </div>
+
+            <div class="resolucao-box" id="bloco-resolucao">
+              <p><strong>Seu problema foi resolvido?</strong><br>Confirme para encerrar esta solicitação.</p>
+              <div class="res-btns">
+                <button type="button" class="btn-res-sim" onclick="responderResolucao('sim')">Sim</button>
+                <button type="button" class="btn-res-nao" onclick="responderResolucao('nao')">Não</button>
+              </div>
+              <div id="feedback-resolucao" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 500;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+
+    <footer>Instituto Federal do Piauí — Central de Demandas da Coordenação</footer>
+  </div>
+
+  <div id="coordenacao-page" class="page">
+    <main class="main-content" style="max-width: 1200px;">
+      
+      <div class="alert-banner-red">
+        <div class="alert-content">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <strong>Alta demanda — 23 solicitações aguardando resposta</strong>
+            <p>7 com alta prioridade · 3 com prazo vencendo hoje</p>
+          </div>
+        </div>
+        <span class="alert-date">20/09/2026 - 09:45</span>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon">📋</div><div class="kpi-val">24</div><div class="kpi-lbl">Solicitações Abertas</div></div>
+        <div class="kpi-card border-red"><div class="kpi-icon red">🔴</div><div class="kpi-val">7</div><div class="kpi-lbl red">Alta Prioridade</div></div>
+        <div class="kpi-card border-yellow"><div class="kpi-icon yellow">🟡</div><div class="kpi-val">10</div><div class="kpi-lbl yellow">Média Prioridade</div></div>
+        <div class="kpi-card border-green"><div class="kpi-icon green">🟢</div><div class="kpi-val">7</div><div class="kpi-lbl green">Baixa Prioridade</div></div>
+        <div class="kpi-card"><div class="kpi-icon blue">⚙️</div><div class="kpi-val">12</div><div class="kpi-lbl">Em Andamento</div></div>
+        <div class="kpi-card"><div class="kpi-icon green-check">✅</div><div class="kpi-val">5</div><div class="kpi-lbl">Resolvidas Hoje</div></div>
+      </div>
+
+      <div class="coord-main-grid">
+        
+        <div class="coord-card">
+          <div class="coord-card-header">
+            <h3>Fila Inteligente</h3>
+            <div class="filter-pills">
+              <button class="pill-filter active" onclick="filtrarTabela('Todas', this)">Todas</button>
+              <button class="pill-filter" onclick="filtrarTabela('Alta', this)">Alta</button>
+              <button class="pill-filter" onclick="filtrarTabela('Média', this)">Média</button>
+              <button class="pill-filter" onclick="filtrarTabela('Baixa', this)">Baixa</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="coord-table">
+              <thead>
+                <tr>
+                  <th>CÓDIGO</th>
+                  <th>ALUNO</th>
+                  <th>CATEGORIA</th>
+                  <th>PRIORIDADE</th>
+                  <th>STATUS</th>
+                  <th>AÇÕES</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-fila">
+                <tr data-prioridade="Alta">
+                  <td><strong>#2026-015</strong> <span class="badge-prazo">⏳ Prazo</span></td>
+                  <td><strong>João Pedro Carvalho</strong><br><small>Informática</small></td>
+                  <td>Matrícula</td>
+                  <td><span class="badge-prio alta">• Alta</span></td>
+                  <td><span class="badge-st andamento">Em Andamento</span></td>
+                  <td>
+                    <button class="btn-tb-abrir" onclick="abrirAbaAluno('acompanhar')">Abrir</button>
+                    <button class="btn-tb-resp" onclick="alert('Responder solicitação #2026-015')">Responder</button>
+                  </td>
+                </tr>
+                <tr data-prioridade="Alta">
+                  <td><strong>#2026-016</strong> <span class="badge-prazo">⏳ Prazo</span></td>
+                  <td><strong>Maria Clara Santos</strong><br><small>Informática</small></td>
+                  <td>Documentação</td>
+                  <td><span class="badge-prio alta">• Alta</span></td>
+                  <td><span class="badge-st analise">Em Análise</span></td>
+                  <td>
+                    <button class="btn-tb-abrir" onclick="abrirAbaAluno('acompanhar')">Abrir</button>
+                    <button class="btn-tb-resp" onclick="alert('Responder solicitação #2026-016')">Responder</button>
+                  </td>
+                </tr>
+                <tr data-prioridade="Alta">
+                  <td><strong>#2026-017</strong></td>
+                  <td><strong>Turma de Informática 2023.2</strong><br><small>Informática</small><br><span class="badge-coletiva">👥 Coletiva</span></td>
+                  <td>Horários</td>
+                  <td><span class="badge-prio alta">• Alta</span></td>
+                  <td><span class="badge-st recebido">Recebido</span></td>
+                  <td>
+                    <button class="btn-tb-abrir" onclick="abrirAbaAluno('acompanhar')">Abrir</button>
+                    <button class="btn-tb-resp" onclick="alert('Responder solicitação #2026-017')">Responder</button>
+                  </td>
+                </tr>
+                <tr data-prioridade="Média">
+                  <td><strong>#2026-018</strong></td>
+                  <td><strong>Pedro Henrique Lima</strong><br><small>Informática</small></td>
+                  <td>Professores</td>
+                  <td><span class="badge-prio media">• Média</span></td>
+                  <td><span class="badge-st andamento">Em Andamento</span></td>
+                  <td>
+                    <button class="btn-tb-abrir" onclick="abrirAbaAluno('acompanhar')">Abrir</button>
+                    <button class="btn-tb-resp" onclick="alert('Responder solicitação #2026-018')">Responder</button>
+                  </td>
+                </tr>
+                <tr data-prioridade="Média">
+                  <td><strong>#2026-019</strong> <span class="badge-prazo">⏳ Prazo</span></td>
+                  <td><strong>Ana Beatriz Ferreira</strong><br><small>Informática</small></td>
+                  <td>Matrícula</td>
+                  <td><span class="badge-prio media">• Média</span></td>
+                  <td><span class="badge-st analise">Em Análise</span></td>
+                  <td>
+                    <button class="btn-tb-abrir" onclick="abrirAbaAluno('acompanhar')">Abrir</button>
+                    <button class="btn-tb-resp" onclick="alert('Responder solicitação #2026-019')">Responder</button>
+                  </td>
+                </tr>
+                <tr data-prioridade="Média">
+                  <td><strong>#2026-020</strong></td>
+                  <td><strong>Lucas Mendes Costa</strong><br><small>Informática</small></td>
+                  <td>Estrutura</td>
+                  <td><span class="badge-prio media">• Média</span></td>
+                  <td><span class="badge-st recebido">Recebido</span></td>
+                  <td>
+                    <button class="btn-tb-abrir" onclick="abrirAbaAluno('acompanhar')">Abrir</button>
+                    <button class="btn-tb-resp" onclick="alert('Responder solicitação #2026-020')">Responder</button>
+                  </td>
+                </tr>
+                <tr data-prioridade="Baixa">
+                  <td><strong>#2026-021</strong></td>
+                  <td><strong>Fernanda Oliveira</strong><br><small>Informática</small></td>
+                  <td>Documentação</td>
+                  <td><span class="badge-prio baixa">• Baixa</span></td>
+                  <td><span class="badge-st recebido">Recebido</span></td>
+                  <td>
+                    <button class="btn-tb-abrir" onclick="abrirAbaAluno('acompanhar')">Abrir</button>
+                    <button class="btn-tb-resp" onclick="alert('Responder solicitação #2026-021')">Responder</button>
+                  </td>
+                </tr>
+                <tr data-prioridade="Baixa">
+                  <td><strong>#2026-022</strong></td>
+                  <td><strong>Rafael Souza Nunes</strong><br><small>Informática</small></td>
+                  <td>Outros</td>
+                  <td><span class="badge-prio baixa">• Baixa</span></td>
+                  <td><span class="badge-st analise">Em Análise</span></td>
+                  <td>
+                    <button class="btn-tb-abrir" onclick="abrirAbaAluno('acompanhar')">Abrir</button>
+                    <button class="btn-tb-resp" onclick="alert('Responder solicitação #2026-022')">Responder</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="coord-card">
+          <div class="coord-card-header">
+            <h3>Tipos de Problema</h3>
+            <div class="toggle-chart">
+              <button class="chart-btn" onclick="mudarGrafico('pizza')">Pizza</button>
+              <button class="chart-btn active" onclick="mudarGrafico('barras')">Barras</button>
+            </div>
+          </div>
+
+          <div id="chart-barras" class="bar-chart-sim">
+            <div class="chart-bars-wrapper">
+              <div class="bar-col"><div class="bar dark" style="height: 60%;"></div><div class="bar light" style="height: 35%;"></div><span>Seg</span></div>
+              <div class="bar-col"><div class="bar dark" style="height: 80%;"></div><div class="bar light" style="height: 50%;"></div><span>Ter</span></div>
+              <div class="bar-col"><div class="bar dark" style="height: 45%;"></div><div class="bar light" style="height: 40%;"></div><span>Qua</span></div>
+              <div class="bar-col"><div class="bar dark" style="height: 95%;"></div><div class="bar light" style="height: 65%;"></div><span>Qui</span></div>
+              <div class="bar-col"><div class="bar dark" style="height: 70%;"></div><div class="bar light" style="height: 45%;"></div><span>Sex</span></div>
+            </div>
+            <div class="chart-legend">
+              <span><strong class="sq dark"></strong> Abertas</span>
+              <span><strong class="sq light"></strong> Resolvidas</span>
+            </div>
+          </div>
+
+          <div id="chart-pizza" class="pizza-chart-sim hidden">
+            <div class="donut-ring"></div>
+            <ul class="pizza-legend">
+              <li><span>• Matrícula</span> <strong>35%</strong></li>
+              <li><span>• Documentação</span> <strong>25%</strong></li>
+              <li><span>• Horários</span> <strong>20%</strong></li>
+              <li><span>• Estrutura</span> <strong>12%</strong></li>
+              <li><span>• Outros</span> <strong>8%</strong></li>
+            </ul>
+          </div>
+
+          <div class="semana-atual-box">
+            <span class="sa-title">SEMANA ATUAL</span>
+            <div class="sa-grid">
+              <div><strong class="sa-val">37</strong><small>Resolvidas</small></div>
+              <div><strong class="sa-val">50</strong><small>Novas</small></div>
+              <div><strong class="sa-val">74%</strong><small>Taxa resolução</small></div>
+              <div><strong class="sa-val">2.3h</strong><small>Tempo médio</small></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <footer>Instituto Federal do Piauí — Central de Demandas da Coordenação</footer>
+  </div>
+
+  <script>
+    const respostasPrioridade = { q1: 'Nao', q2: 'Nao', q3: 'Nao' };
+
+    function fazerLogin(event) {
+      event.preventDefault();
+      const mat = document.getElementById('matricula').value.trim();
+      const sen = document.getElementById('senha').value.trim();
+      const errBox = document.getElementById('login-erro');
+
+      if (mat === '' || sen === '') {
+        errBox.innerText = 'Preencha a matrícula e a senha para entrar!';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      errBox.classList.add('hidden');
+      document.getElementById('global-header').classList.remove('hidden');
+      navegarPara('dashboard-page');
+    }
+
+    function fazerLogout() {
+      document.getElementById('global-header').classList.add('hidden');
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('login-page').classList.add('active');
+      document.getElementById('matricula').value = '';
+      document.getElementById('senha').value = '';
+    }
+
+    function navegarPara(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+
+      document.getElementById('nav-home').classList.remove('active');
+      document.getElementById('nav-aluno').classList.remove('active');
+      document.getElementById('nav-coord').classList.remove('active');
+
+      if (pageId === 'dashboard-page') {
+        document.getElementById('nav-home').classList.add('active');
+      } else if (pageId === 'aluno-page') {
+        document.getElementById('nav-aluno').classList.add('active');
+      } else if (pageId === 'coordenacao-page') {
+        document.getElementById('nav-coord').classList.add('active');
+      }
+    }
+
+    function abrirAbaAluno(tipo) {
+      navegarPara('aluno-page');
+      mudarSubAba(tipo);
+      if (tipo === 'acompanhar') {
+        document.getElementById('input-protocolo').value = '#2026-015';
+        buscarProtocolo();
+      }
+    }
+
+    function mudarSubAba(tipo) {
+      document.getElementById('tab-btn-nova').classList.remove('active');
+      document.getElementById('tab-btn-acompanhar').classList.remove('active');
+      document.getElementById('secao-nova').classList.remove('active');
+      document.getElementById('secao-acompanhar').classList.remove('active');
+
+      if (tipo === 'nova') {
+        document.getElementById('tab-btn-nova').classList.add('active');
+        document.getElementById('secao-nova').classList.add('active');
+      } else {
+        document.getElementById('tab-btn-acompanhar').classList.add('active');
+        document.getElementById('secao-acompanhar').classList.add('active');
+      }
+    }
+
+    function ativarChip(btn) {
+      btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function mudarToggle(btn, valor) {
+      const group = btn.parentElement;
+      const qid = group.getAttribute('data-qid');
+      group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      respostasPrioridade[qid] = valor;
+      calcularPrioridade();
+    }
+
+    function calcularPrioridade() {
+      const valores = Object.values(respostasPrioridade);
+      const totalSims = valores.filter(v => v === 'Sim').length;
+      const totalNao = valores.filter(v => v === 'Nao').length;
+      const labelEl = document.getElementById('label-prioridade');
+
+      if (totalSims >= 2) {
+        labelEl.innerText = 'Alta';
+        labelEl.style.color = '#ef4444';
+      } else if (totalSims === 1 && totalNao === 2) {
+        labelEl.innerText = 'Média';
+        labelEl.style.color = '#f59e0b';
+      } else {
+        labelEl.innerText = 'Baixa';
+        labelEl.style.color = '#10b981';
+      }
+    }
+
+    function enviarFormulario(e) {
+      e.preventDefault();
+      alert('Solicitação enviada com sucesso! Protocolo gerado: #2026-015');
+      abrirAbaAluno('acompanhar');
+    }
+
+    function buscarProtocolo() {
+      const val = document.getElementById('input-protocolo').value.trim();
+      const resBox = document.getElementById('resultado-protocolo');
+      if (val === '#2026-015') {
+        resBox.classList.remove('hidden');
+      } else {
+        alert('Protocolo não encontrado. Tente: #2026-015');
+        resBox.classList.add('hidden');
+      }
+    }
+
+    function enviarMensagemChat() {
+      const txtInput = document.getElementById('chat-txt');
+      const txt = txtInput.value.trim();
+      if (!txt) return;
+
+      const chatMsgs = document.getElementById('chat-messages');
+      const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      chatMsgs.innerHTML += `
+        <div class="chat-bubble aluno">
+          <strong>Você</strong>
+          <p>${txt}</p>
+          <span class="time">${timeNow}</span>
+        </div>
+      `;
+      txtInput.value = '';
+      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    }
+
+    function responderResolucao(resp) {
+      const fb = document.getElementById('feedback-resolucao');
+      if (resp === 'sim') {
+        fb.innerHTML = '<span style="color: #10b981;">Ótimo! Obrigado pelo retorno.<br>Solicitação encerrada com sucesso.</span>';
+      } else {
+        fb.innerHTML = '<span style="color: #ef4444;">Entendemos. Vamos continuar trabalhando.<br>A coordenação foi notificada para reanálise.</span>';
+      }
+    }
+
+    function filtrarTabela(prio, btn) {
+      document.querySelectorAll('.pill-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const trs = document.querySelectorAll('#tbody-fila tr');
+      trs.forEach(tr => {
+        if (prio === 'Todas' || tr.getAttribute('data-prioridade') === prio) {
+          tr.style.display = '';
+        } else {
+          tr.style.display = 'none';
+        }
+      });
+    }
+
+    function mudarGrafico(tipo) {
+      document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+      if (tipo === 'barras') {
+        document.querySelectorAll('.chart-btn')[1].classList.add('active');
+        document.getElementById('chart-barras').classList.remove('hidden');
+        document.getElementById('chart-pizza').classList.add('hidden');
+      } else {
+        document.querySelectorAll('.chart-btn')[0].classList.add('active');
+        document.getElementById('chart-barras').classList.add('hidden');
+        document.getElementById('chart-pizza').classList.remove('hidden');
+      }
+    }
+
+    function toggleNotificacoes() {
+      document.getElementById('popover-notificacoes').classList.toggle('hidden');
+    }
+  </script>
+</body>
+</html>
