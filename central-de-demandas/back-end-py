@@ -1,0 +1,145 @@
+from datetime import datetime
+from flask import Flask, jsonify, render_template, request
+
+app = Flask(__name__)
+
+SOLICITACOES_DB = {
+    "#2026-015": {
+        "codigo": "#2026-015",
+        "aluno": "João Pedro Carvalho",
+        "curso": "Análise e Desenvolvimento de Sistemas",
+        "campus": "Informática",
+        "categoria": "Matrícula",
+        "prioridade": "Alta",
+        "status": "Em Andamento",
+        "prazo": True,
+        "mensagens": [
+            {
+                "remetente": "Coordenação",
+                "texto": (
+                    "Olá! Recebemos sua solicitação e estamos verificando o"
+                    " problema no SIGAA. Aguarde."
+                ),
+                "hora": "09:15",
+            },
+            {
+                "remetente": "Você",
+                "texto": (
+                    "Obrigado! O problema persiste. Preciso acessar até sexta"
+                    " para verificar minhas frequências."
+                ),
+                "hora": "09:32",
+            },
+        ],
+        "anexos": ["print_sigaa_erro.png", "comprovante_matricula.pdf"],
+    },
+    "#2026-016": {
+        "codigo": "#2026-016",
+        "aluno": "Maria Clara Santos",
+        "curso": "Técnico em Informática",
+        "campus": "Informática",
+        "categoria": "Documentação",
+        "prioridade": "Alta",
+        "status": "Em Análise",
+        "prazo": True,
+        "mensagens": [],
+        "anexos": ["declaracao.pdf"],
+    },
+}
+
+METRICAS_GLOBAL = {
+    "abertas": 24,
+    "alta_prioridade": 7,
+    "media_prioridade": 10,
+    "baixa_prioridade": 7,
+    "em_andamento": 12,
+    "resolvidas_hoje": 5,
+}
+
+
+@app.route("/")
+def index():
+  return render_template("index.html")
+
+
+@app.route("/api/login", methods=["POST"])
+def api_login():
+  dados = request.get_json() or {}
+  matricula = dados.get("matricula", "").strip()
+  senha = dados.get("senha", "").strip()
+
+  if not matricula or not senha:
+    return (
+        jsonify({"sucesso": False, "erro": "Preencha a matrícula e a senha."}),
+        400,
+    )
+
+  return jsonify({
+      "sucesso": True,
+      "mensagem": "Login efetuado com sucesso!",
+      "usuario": matricula,
+  })
+
+
+@app.route("/api/solicitacoes/<protocolo>", methods=["GET"])
+def api_obter_solicitacao(protocolo):
+  protocolo = f"#{protocolo}" if not protocolo.startswith("#") else protocolo
+  solicitacao = SOLICITACOES_DB.get(protocolo)
+
+  if not solicitacao:
+    return jsonify({"sucesso": False, "erro": "Protocolo não encontrado."}), 404
+
+  return jsonify({"sucesso": True, "dados": solicitacao})
+
+
+@app.route("/api/solicitacoes/<protocolo>/chat", methods=["POST"])
+def api_enviar_mensagem(protocolo):
+  protocolo = f"#{protocolo}" if not protocolo.startswith("#") else protocolo
+  if protocolo not in SOLICITACOES_DB:
+    return jsonify({"sucesso": False, "erro": "Protocolo não encontrado."}), 404
+
+  dados = request.get_json() or {}
+  texto = dados.get("texto", "").strip()
+
+  if not texto:
+    return (
+        jsonify({"sucesso": False, "erro": "A mensagem não pode estar vazia."}),
+        400,
+    )
+
+  hora_atual = datetime.now().strftime("%H:%M")
+  nova_msg = {"remetente": "Você", "texto": texto, "hora": hora_atual}
+
+  SOLICITACOES_DB[protocolo]["mensagens"].append(nova_msg)
+  return jsonify({"sucesso": True, "mensagem": nova_msg})
+
+
+@app.route("/api/solicitacoes/<protocolo>/resolver", methods=["POST"])
+def api_resolver_solicitacao(protocolo):
+  protocolo = f"#{protocolo}" if not protocolo.startswith("#") else protocolo
+  if protocolo not in SOLICITACOES_DB:
+    return jsonify({"sucesso": False, "erro": "Protocolo não encontrado."}), 404
+
+  dados = request.get_json() or {}
+  resolvido = dados.get("resolvido", False)
+
+  if resolvido:
+    SOLICITACOES_DB[protocolo]["status"] = "Resolvido"
+    msg = "Solicitação encerrada com sucesso."
+  else:
+    SOLICITACOES_DB[protocolo]["status"] = "Em Andamento (Reanálise)"
+    msg = "A coordenação foi notificada para reanálise."
+
+  return jsonify({"sucesso": True, "mensagem": msg})
+
+
+@app.route("/api/coordenacao/metricas", methods=["GET"])
+def api_metricas_coordenacao():
+  fila = list(SOLICITACOES_DB.values())
+  return jsonify(
+      {"sucesso": True, "kpis": METRICAS_GLOBAL, "fila_inteligente": fila}
+  )
+
+
+if __name__ == "__main__":
+  app.run(debug=True, port=5000)
