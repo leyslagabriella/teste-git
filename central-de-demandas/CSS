@@ -37,6 +37,7 @@ body {
 .login-container { display: flex; width: 100%; min-height: 100vh; }
 .login-sidebar { flex: 1; background: linear-gradient(135deg, #0d3b26 0%, #176843 100%); color: white; padding: 3rem; display: flex; flex-direction: column; justify-content: space-between; }
 .login-sidebar .logo { font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+.login-sidebar .logo { width:30xp; heigth; 30px; object-fit: contain; flex-shrink: 0;}
 .login-sidebar .hero-text h1 { font-size: 2.2rem; line-height: 1.2; margin-bottom: 1rem; }
 .login-sidebar .hero-text p { color: #a3b8ac; font-size: 0.95rem; max-width: 350px; }
 .login-sidebar .footer-info { font-size: 0.8rem; color: #799885; }
