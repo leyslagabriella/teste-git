@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS central_demandas_corrigido;
+
 USE central_demandas_corrigido;
 
 -- 1. USUARIOS
