@@ -1,35 +1,70 @@
--- 6. HISTORICO DE STATUS
-CREATE TABLE historico_status (
-    id_historico BIGINT AUTO_INCREMENT PRIMARY KEY,
-    data_alteracao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    observacao VARCHAR(500),
-    id_solicitacao INT NOT NULL,
+CREATE DATABASE IF NOT EXISTS central_demandas_corrigido;
+USE central_demandas_corrigido;
+
+-- 1. USUARIOS
+CREATE TABLE usuarios (
+    id_usuarios INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    matricula VARCHAR(40) NOT NULL UNIQUE,
+    curso VARCHAR(50),
+    turma VARCHAR(20),
+    senha_hash VARCHAR(255) NOT NULL,
+    tipo_usuario VARCHAR(20) NOT NULL
+);
+
+-- 2. CATEGORIAS
+CREATE TABLE categorias (
+    id_categorias INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(80) NOT NULL,
+    descricao VARCHAR(255)
+);
+
+-- 3. STATUS DAS SOLICITACOES
+CREATE TABLE status_solicitacao (
+    id_status INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(60) NOT NULL UNIQUE
+);
+
+-- 4. SOLICITACOES
+CREATE TABLE solicitacao (
+    id_solicitacao INT AUTO_INCREMENT PRIMARY KEY,
+    protocolo VARCHAR(20) NOT NULL UNIQUE,
+    titulo VARCHAR(100) NOT NULL,
+    descricao TEXT NOT NULL,
+    data_criacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    prazo DATE,
+    prioridade VARCHAR(45) NOT NULL DEFAULT 'media',
+    id_usuario INT NOT NULL,
+    id_categoria INT NOT NULL,
     id_status INT NOT NULL,
+
+    CONSTRAINT fk_solicitacao_usuario
+        FOREIGN KEY (id_usuario)
+        REFERENCES usuarios(id_usuarios),
+
+    CONSTRAINT fk_solicitacao_categoria
+        FOREIGN KEY (id_categoria)
+        REFERENCES categorias(id_categorias),
+
+    CONSTRAINT fk_solicitacao_status
+        FOREIGN KEY (id_status)
+        REFERENCES status_solicitacao(id_status)
+);
+
+-- 5. MENSAGENS
+CREATE TABLE mensagens (
+    id_mensagens BIGINT AUTO_INCREMENT PRIMARY KEY,
+    conteudo TEXT NOT NULL,
+    data_envio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id_solicitacao INT NOT NULL,
     id_usuario INT NOT NULL,
 
-    CONSTRAINT fk_historico_solicitacao
+    CONSTRAINT fk_mensagem_solicitacao
         FOREIGN KEY (id_solicitacao)
         REFERENCES solicitacao(id_solicitacao),
 
-    CONSTRAINT fk_historico_status
-        FOREIGN KEY (id_status)
-        REFERENCES status_solicitacao(id_status),
-
-    CONSTRAINT fk_historico_usuario
+    CONSTRAINT fk_mensagem_usuario
         FOREIGN KEY (id_usuario)
         REFERENCES usuarios(id_usuarios)
 );
 
--- 7. ANEXOS
-CREATE TABLE anexos (
-    id_anexos BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nome_arquivo VARCHAR(255) NOT NULL,
-    caminho_arquivo VARCHAR(500) NOT NULL,
-    tipo_mime VARCHAR(100),
-    tamanho_bytes BIGINT,
-    id_solicitacao INT NOT NULL,
-
-    CONSTRAINT fk_anexo_solicitacao
-        FOREIGN KEY (id_solicitacao)
-        REFERENCES solicitacao(id_solicitacao)
-);
