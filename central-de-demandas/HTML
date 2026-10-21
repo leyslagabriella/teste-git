@@ -10,7 +10,7 @@
 
   <header id="global-header" class="topbar hidden">
     <div class="header-logo">
-      <img src="LOGO IFPI.jpeg" alt="Logo do IFPI" class="header-logo-img">
+      <img src="LOGO IFPI.png" alt="Logo do IFPI" class="header-logo-img">
       <span>IFPI Central de Demandas da Coordenação</span>
     </div>
     <div class="nav-links">
@@ -45,7 +45,7 @@
     <div class="login-container">
       <div class="login-sidebar">
         <div class="logo">
-          <img src="LOGO IFPI.jpeg" alt="Logo do IFPI" class="logo-img">
+          <img src="LOGO IFPI.png" alt="Logo do IFPI" class="logo-img">
           IFPI Campus Paulistana
         </div>
         <div class="hero-text">
