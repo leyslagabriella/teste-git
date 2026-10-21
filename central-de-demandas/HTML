@@ -8,21 +8,13 @@
 </head>
 <body>
 
-  <header id="global-header" class="topbar hidden">
-    <div class="header-logo">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="2" width="5" height="5" rx="1" fill="#38A169"/>
-        <rect x="2" y="9" width="5" height="5" rx="1" fill="#38A169"/>
-        <rect x="2" y="16" width="5" height="5" rx="1" fill="#38A169"/>
-        <rect x="9" y="2" width="5" height="5" rx="1" fill="#38A169"/>
-        <rect x="9" y="9" width="5" height="5" rx="1" fill="#38A169"/>
-        <rect x="9" y="16" width="5" height="5" rx="1" fill="#38A169"/>
-        <rect x="16" y="2" width="5" height="5" rx="1" fill="#E53E3E"/>
-        <rect x="16" y="9" width="5" height="5" rx="1" fill="#38A169"/>
-        <rect x="16" y="16" width="5" height="5" rx="1" fill="#38A169"/>
-      </svg>
-      <span>IFPI Central de Demandas da Coordenação</span>
-    </div>
+  <header id="global-header" class="topbar hidden"> 
+<div class="header-logo">
+<img src="LOGO IFPI.jpeg"
+alt="Logo do IFPI"
+class="header-logo-img">
+<span>IFPI Central de Demandas da Coordenação</span>
+</div>
     <div class="nav-links">
       <button id="nav-home" class="active" onclick="navegarPara('dashboard-page')">Página Inicial</button>
       <button id="nav-aluno" onclick="abrirAbaAluno('nova')">Área do Aluno</button>
