@@ -63,6 +63,7 @@ header.topbar {
   background-color: white; border-bottom: 1px solid var(--border-color); padding: 0.8rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100;
 }
 .header-logo { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: bold; color: var(--primary-color); }
+.header-logo-img { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
 .nav-links { display: flex; gap: 10px; align-items: center; }
 .nav-links button { padding: 0.5rem 1rem; background: none; border: 1px solid transparent; border-radius: 6px; font-size: 0.85rem; color: var(--text-dark); cursor: pointer; }
 .nav-links button.active { background-color: var(--bg-light); border-color: var(--border-color); font-weight: 600; }
