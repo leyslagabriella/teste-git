@@ -1,145 +1,1214 @@
-from datetime import datetime
-from flask import Flask, jsonify, render_template, request
+import os
+import re
+import secrets
+from datetime import datetime, date
+from functools import wraps
+from pathlib import Path
+
+import mysql.connector
+from mysql.connector import Error
+from flask import (
+    Flask, jsonify, render_template, request, session,
+    send_from_directory
+)
+from werkzeug.security import check_password_hash
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.secret_key = os.getenv(
+    "FLASK_SECRET_KEY",
+    "troque-esta-chave-por-uma-chave-segura"
+)
 
-SOLICITACOES_DB = {
-    "#2026-015": {
-        "codigo": "#2026-015",
-        "aluno": "João Pedro Carvalho",
-        "curso": "Análise e Desenvolvimento de Sistemas",
-        "campus": "Informática",
-        "categoria": "Matrícula",
-        "prioridade": "Alta",
-        "status": "Em Andamento",
-        "prazo": True,
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+EXTENSOES_PERMITIDAS = {"pdf", "png", "jpg", "jpeg"}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+
+DB_CONFIG = {
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "3306")),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", ""),
+    "database": os.getenv("DB_NAME", "central_demandas"),
+    "charset": "utf8mb4",
+    "use_unicode": True,
+}
+
+def conectar_banco():
+    return mysql.connector.connect(**DB_CONFIG)
+
+def executar(sql, parametros=(), buscar=None, commit=False):
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        cursor.execute(sql, parametros)
+
+        if buscar == "um":
+            resultado = cursor.fetchone()
+        elif buscar == "todos":
+            resultado = cursor.fetchall()
+        else:
+            resultado = cursor.lastrowid
+
+        if commit:
+            conexao.commit()
+
+        return resultado
+
+    except Exception:
+        if commit:
+            conexao.rollback()
+        raise
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+def erro_json(mensagem, status=400):
+    return jsonify({
+        "sucesso": False,
+        "erro": mensagem
+    }), status
+
+def usuario_atual():
+    return session.get("usuario")
+
+def login_obrigatorio(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not usuario_atual():
+            return erro_json("Faça login para continuar.", 401)
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+def coordenacao_obrigatoria(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        usuario = usuario_atual()
+
+        if not usuario:
+            return erro_json("Faça login para continuar.", 401)
+
+        if usuario.get("tipo_usuario", "").lower() not in {
+            "coordenacao",
+            "coordenador",
+            "admin",
+            "administrador"
+        }:
+            return erro_json("Acesso restrito à coordenação.", 403)
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+def normalizar_protocolo(valor):
+    valor = str(valor or "").strip()
+
+    if not valor:
+        return ""
+
+    return valor if valor.startswith("#") else f"#{valor}"
+
+def gerar_protocolo(cursor):
+    ano = datetime.now().year
+
+    cursor.execute(
+        """
+        SELECT protocolo
+        FROM solicitacao
+        WHERE protocolo LIKE %s
+        ORDER BY id_solicitacao DESC
+        LIMIT 1
+        """,
+        (f"#{ano}-%",)
+    )
+
+    registro = cursor.fetchone()
+
+    if registro and registro[0]:
+        match = re.search(r"-(\d+)$", registro[0])
+        numero = int(match.group(1)) + 1 if match else 1
+    else:
+        numero = 1
+
+    return f"#{ano}-{numero:03d}"
+
+def buscar_solicitacao(protocolo):
+    sql = """
+        SELECT
+            s.id_solicitacao,
+            s.protocolo,
+            s.titulo,
+            s.descricao,
+            s.data_criacao,
+            s.prazo,
+            s.prioridade,
+            u.id_usuarios,
+            u.nome AS aluno,
+            u.matricula,
+            u.curso,
+            u.turma,
+            c.nome AS categoria,
+            st.nome AS status
+        FROM solicitacao s
+        JOIN usuarios u
+            ON u.id_usuarios = s.id_usuario
+        LEFT JOIN categorias c
+            ON c.id_categorias = s.id_categoria
+        LEFT JOIN status_solicitacao st
+            ON st.id_status = s.id_status
+        WHERE s.protocolo = %s
+        LIMIT 1
+    """
+
+    return executar(sql, (protocolo,), buscar="um")
+
+def detalhes_solicitacao(protocolo):
+    solicitacao = buscar_solicitacao(protocolo)
+
+    if not solicitacao:
+        return None
+
+    mensagens = executar(
+        """
+        SELECT
+            m.conteudo AS texto,
+            m.data_envio,
+            u.nome AS remetente,
+            u.tipo_usuario
+        FROM mensagens m
+        JOIN usuarios u
+            ON u.id_usuarios = m.id_usuario
+        WHERE m.id_solicitacao = %s
+        ORDER BY m.data_envio ASC, m.id_mensagens ASC
+        """,
+        (solicitacao["id_solicitacao"],),
+        buscar="todos"
+    ) or []
+
+    anexos = executar(
+        """
+        SELECT
+            id_anexos,
+            nome_arquivo,
+            tipo_mime,
+            tamanho_bytes
+        FROM anexos
+        WHERE id_solicitacao = %s
+        ORDER BY id_anexos ASC
+        """,
+        (solicitacao["id_solicitacao"],),
+        buscar="todos"
+    ) or []
+
+    historico = executar(
+        """
+        SELECT
+            h.data_alteracao,
+            h.observacao,
+            st.nome AS status,
+            u.nome AS responsavel
+        FROM historico_status h
+        LEFT JOIN status_solicitacao st
+            ON st.id_status = h.id_status
+        LEFT JOIN usuarios u
+            ON u.id_usuarios = h.id_usuario
+        WHERE h.id_solicitacao = %s
+        ORDER BY h.data_alteracao ASC, h.id_historico ASC
+        """,
+        (solicitacao["id_solicitacao"],),
+        buscar="todos"
+    ) or []
+
+    return {
+        "codigo": solicitacao["protocolo"],
+        "id_solicitacao": solicitacao["id_solicitacao"],
+        "titulo": solicitacao["titulo"],
+        "descricao": solicitacao["descricao"],
+        "aluno": solicitacao["aluno"],
+        "matricula": solicitacao["matricula"],
+        "curso": solicitacao["curso"],
+        "turma": solicitacao["turma"],
+        "categoria": solicitacao["categoria"] or "Sem categoria",
+        "prioridade": solicitacao["prioridade"],
+        "status": solicitacao["status"] or "Recebido",
+        "prazo": (
+            solicitacao["prazo"].isoformat()
+            if solicitacao["prazo"] else None
+        ),
+        "data_criacao": (
+            solicitacao["data_criacao"].isoformat(sep=" ")
+            if solicitacao["data_criacao"] else None
+        ),
         "mensagens": [
             {
-                "remetente": "Coordenação",
-                "texto": (
-                    "Olá! Recebemos sua solicitação e estamos verificando o"
-                    " problema no SIGAA. Aguarde."
+                "remetente": m["remetente"],
+                "texto": m["texto"],
+                "hora": (
+                    m["data_envio"].strftime("%H:%M")
+                    if m["data_envio"] else ""
                 ),
-                "hora": "09:15",
-            },
-            {
-                "remetente": "Você",
-                "texto": (
-                    "Obrigado! O problema persiste. Preciso acessar até sexta"
-                    " para verificar minhas frequências."
-                ),
-                "hora": "09:32",
-            },
+                "data_envio": (
+                    m["data_envio"].isoformat(sep=" ")
+                    if m["data_envio"] else None
+                )
+            }
+            for m in mensagens
         ],
-        "anexos": ["print_sigaa_erro.png", "comprovante_matricula.pdf"],
-    },
-    "#2026-016": {
-        "codigo": "#2026-016",
-        "aluno": "Maria Clara Santos",
-        "curso": "Técnico em Informática",
-        "campus": "Informática",
-        "categoria": "Documentação",
-        "prioridade": "Alta",
-        "status": "Em Análise",
-        "prazo": True,
-        "mensagens": [],
-        "anexos": ["declaracao.pdf"],
-    },
-}
-
-METRICAS_GLOBAL = {
-    "abertas": 24,
-    "alta_prioridade": 7,
-    "media_prioridade": 10,
-    "baixa_prioridade": 7,
-    "em_andamento": 12,
-    "resolvidas_hoje": 5,
-}
-
+        "anexos": [
+            {
+                "id": a["id_anexos"],
+                "nome": a["nome_arquivo"],
+                "tipo_mime": a["tipo_mime"],
+                "tamanho_bytes": a["tamanho_bytes"],
+                "url": f"/api/anexos/{a['id_anexos']}/download"
+            }
+            for a in anexos
+        ],
+        "historico": [
+            {
+                "status": h["status"],
+                "observacao": h["observacao"],
+                "responsavel": h["responsavel"],
+                "data": (
+                    h["data_alteracao"].isoformat(sep=" ")
+                    if h["data_alteracao"] else None
+                )
+            }
+            for h in historico
+        ]
+    }
 
 @app.route("/")
 def index():
-  return render_template("index.html")
-
+    return render_template("index.html")
 
 @app.route("/api/login", methods=["POST"])
 def api_login():
-  dados = request.get_json() or {}
-  matricula = dados.get("matricula", "").strip()
-  senha = dados.get("senha", "").strip()
+    dados = request.get_json(silent=True) or request.form
 
-  if not matricula or not senha:
-    return (
-        jsonify({"sucesso": False, "erro": "Preencha a matrícula e a senha."}),
-        400,
+    matricula = str(dados.get("matricula", "")).strip()
+    senha = str(dados.get("senha", ""))
+
+    if not matricula or not senha:
+        return erro_json(
+            "Preencha a matrícula e a senha."
+        )
+
+    try:
+        usuario = executar(
+            """
+            SELECT
+                id_usuarios,
+                nome,
+                matricula,
+                curso,
+                turma,
+                senha_hash,
+                tipo_usuario
+            FROM usuarios
+            WHERE matricula = %s
+            LIMIT 1
+            """,
+            (matricula,),
+            buscar="um"
+        )
+
+    except Error:
+        app.logger.exception("Falha ao consultar usuário.")
+        return erro_json(
+            "Não foi possível acessar o banco de dados.",
+            500
+        )
+
+    if (
+        not usuario
+        or not check_password_hash(
+            usuario["senha_hash"],
+            senha
+        )
+    ):
+        return erro_json(
+            "Matrícula ou senha incorretas.",
+            401
+        )
+
+    session.clear()
+
+    session["usuario"] = {
+        "id_usuarios": usuario["id_usuarios"],
+        "nome": usuario["nome"],
+        "matricula": usuario["matricula"],
+        "curso": usuario["curso"],
+        "turma": usuario["turma"],
+        "tipo_usuario": usuario["tipo_usuario"]
+    }
+
+    return jsonify({
+        "sucesso": True,
+        "mensagem": "Login efetuado.",
+        "usuario": session["usuario"]
+    })
+
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    session.clear()
+
+    return jsonify({
+        "sucesso": True,
+        "mensagem": "Sessão encerrada."
+    })
+
+@app.route("/api/usuario", methods=["GET"])
+@login_obrigatorio
+def api_usuario():
+    return jsonify({
+        "sucesso": True,
+        "usuario": usuario_atual()
+    })
+
+@app.route("/api/categorias", methods=["GET"])
+@login_obrigatorio
+def api_categorias():
+    try:
+        categorias = executar(
+            """
+            SELECT
+                id_categorias AS id,
+                nome,
+                descricao
+            FROM categorias
+            ORDER BY nome
+            """,
+            buscar="todos"
+        ) or []
+
+        return jsonify({
+            "sucesso": True,
+            "categorias": categorias
+        })
+
+    except Error:
+        app.logger.exception("Falha ao consultar categorias.")
+
+        return erro_json(
+            "Não foi possível consultar as categorias.",
+            500
+        )
+
+@app.route("/api/solicitacoes", methods=["POST"])
+@login_obrigatorio
+def api_criar_solicitacao():
+    dados = (
+        request.form
+        if request.form
+        else (request.get_json(silent=True) or {})
     )
 
-  return jsonify({
-      "sucesso": True,
-      "mensagem": "Login efetuado com sucesso!",
-      "usuario": matricula,
-  })
+    usuario = usuario_atual()
 
+    titulo = str(dados.get("titulo", "")).strip()
+    descricao = str(dados.get("descricao", "")).strip()
+    categoria_id = dados.get("id_categoria")
+    prazo_texto = str(dados.get("prazo", "")).strip()
 
-@app.route("/api/solicitacoes/<protocolo>", methods=["GET"])
+    prioridade = str(
+        dados.get("prioridade", "Baixa")
+    ).strip().capitalize()
+
+    if not titulo or not descricao:
+        return erro_json(
+            "Informe o título e a descrição da solicitação."
+        )
+
+    if prioridade not in {"Baixa", "Média", "Alta"}:
+        prioridade = "Baixa"
+
+    prazo = None
+
+    if prazo_texto:
+        try:
+            prazo = date.fromisoformat(prazo_texto)
+        except ValueError:
+            return erro_json("Data de prazo inválida.")
+
+    arquivos = request.files.getlist("anexos")
+    arquivos_validos = []
+
+    for arquivo in arquivos:
+        if not arquivo or not arquivo.filename:
+            continue
+
+        nome = secure_filename(arquivo.filename)
+        extensao = (
+            nome.rsplit(".", 1)[-1].lower()
+            if "." in nome else ""
+        )
+
+        if extensao not in EXTENSOES_PERMITIDAS:
+            return erro_json(
+                "Formato não permitido. Use PDF, PNG ou JPG."
+            )
+
+        arquivos_validos.append((arquivo, nome))
+
+    conexao = None
+    cursor = None
+    nomes_salvos = []
+
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        cursor.execute(
+            """
+            SELECT id_status
+            FROM status_solicitacao
+            WHERE nome = %s
+            LIMIT 1
+            """,
+            ("Recebido",)
+        )
+
+        status = cursor.fetchone()
+
+        if not status:
+            return erro_json(
+                "Cadastre o status 'Recebido' no banco.",
+                500
+            )
+
+        categoria = None
+
+        if categoria_id:
+            cursor.execute(
+                """
+                SELECT id_categorias
+                FROM categorias
+                WHERE id_categorias = %s
+                """,
+                (categoria_id,)
+            )
+
+            categoria = cursor.fetchone()
+
+            if not categoria:
+                return erro_json("Categoria inválida.")
+
+        protocolo = gerar_protocolo(cursor)
+
+        cursor.execute(
+            """
+            INSERT INTO solicitacao (
+                protocolo,
+                titulo,
+                descricao,
+                data_criacao,
+                prazo,
+                prioridade,
+                id_usuario,
+                id_categoria,
+                id_status
+            )
+            VALUES (%s, %s, %s, NOW(), %s, %s, %s, %s, %s)
+            """,
+            (
+                protocolo,
+                titulo,
+                descricao,
+                prazo,
+                prioridade,
+                usuario["id_usuarios"],
+                categoria[0] if categoria else None,
+                status[0]
+            )
+        )
+
+        id_solicitacao = cursor.lastrowid
+
+        cursor.execute(
+            """
+            INSERT INTO historico_status (
+                data_alteracao,
+                observacao,
+                id_solicitacao,
+                id_status,
+                id_usuario
+            )
+            VALUES (NOW(), %s, %s, %s, %s)
+            """,
+            (
+                "Solicitação criada.",
+                id_solicitacao,
+                status[0],
+                usuario["id_usuarios"]
+            )
+        )
+
+        for arquivo, nome_original in arquivos_validos:
+            nome_salvo = (
+                f"{secrets.token_hex(16)}_{nome_original}"
+            )
+
+            caminho = UPLOAD_DIR / nome_salvo
+            arquivo.save(caminho)
+            nomes_salvos.append(caminho)
+
+            tamanho = caminho.stat().st_size
+
+            if tamanho > MAX_UPLOAD_BYTES:
+                raise ValueError(
+                    "Cada anexo deve ter no máximo 10 MB."
+                )
+
+            cursor.execute(
+                """
+                INSERT INTO anexos (
+                    nome_arquivo,
+                    caminho_arquivo,
+                    tipo_mime,
+                    tamanho_bytes,
+                    id_solicitacao
+                )
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (
+                    nome_original,
+                    nome_salvo,
+                    arquivo.mimetype or "application/octet-stream",
+                    tamanho,
+                    id_solicitacao
+                )
+            )
+
+        conexao.commit()
+
+        return jsonify({
+            "sucesso": True,
+            "mensagem": "Solicitação registrada.",
+            "protocolo": protocolo
+        }), 201
+
+    except ValueError as exc:
+        if conexao:
+            conexao.rollback()
+
+        for caminho in nomes_salvos:
+            caminho.unlink(missing_ok=True)
+
+        return erro_json(str(exc))
+
+    except Error:
+        if conexao:
+            conexao.rollback()
+
+        for caminho in nomes_salvos:
+            caminho.unlink(missing_ok=True)
+
+        app.logger.exception("Falha ao criar solicitação.")
+
+        return erro_json(
+            "Não foi possível registrar a solicitação.",
+            500
+        )
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conexao:
+            conexao.close()
+
+@app.route(
+    "/api/solicitacoes/<path:protocolo>",
+    methods=["GET"]
+)
+@login_obrigatorio
 def api_obter_solicitacao(protocolo):
-  protocolo = f"#{protocolo}" if not protocolo.startswith("#") else protocolo
-  solicitacao = SOLICITACOES_DB.get(protocolo)
+    protocolo = normalizar_protocolo(protocolo)
 
-  if not solicitacao:
-    return jsonify({"sucesso": False, "erro": "Protocolo não encontrado."}), 404
+    try:
+        dados = detalhes_solicitacao(protocolo)
 
-  return jsonify({"sucesso": True, "dados": solicitacao})
+        if not dados:
+            return erro_json(
+                "Protocolo não encontrado.",
+                404
+            )
 
+        usuario = usuario_atual()
 
-@app.route("/api/solicitacoes/<protocolo>/chat", methods=["POST"])
+        if (
+            usuario["tipo_usuario"].lower()
+            not in {
+                "coordenacao",
+                "coordenador",
+                "admin",
+                "administrador"
+            }
+            and dados["matricula"] != usuario["matricula"]
+        ):
+            return erro_json(
+                "Você não tem permissão para consultar esta solicitação.",
+                403
+            )
+
+        return jsonify({
+            "sucesso": True,
+            "dados": dados
+        })
+
+    except Error:
+        app.logger.exception("Falha ao consultar solicitação.")
+
+        return erro_json(
+            "Não foi possível consultar a solicitação.",
+            500
+        )
+
+@app.route(
+    "/api/solicitacoes/<path:protocolo>/chat",
+    methods=["POST"]
+)
+@login_obrigatorio
 def api_enviar_mensagem(protocolo):
-  protocolo = f"#{protocolo}" if not protocolo.startswith("#") else protocolo
-  if protocolo not in SOLICITACOES_DB:
-    return jsonify({"sucesso": False, "erro": "Protocolo não encontrado."}), 404
+    protocolo = normalizar_protocolo(protocolo)
+    dados = request.get_json(silent=True) or {}
 
-  dados = request.get_json() or {}
-  texto = dados.get("texto", "").strip()
+    texto = str(dados.get("texto", "")).strip()
 
-  if not texto:
-    return (
-        jsonify({"sucesso": False, "erro": "A mensagem não pode estar vazia."}),
-        400,
+    if not texto:
+        return erro_json(
+            "A mensagem não pode estar vazia."
+        )
+
+    usuario = usuario_atual()
+
+    try:
+        solicitacao = buscar_solicitacao(protocolo)
+
+        if not solicitacao:
+            return erro_json(
+                "Protocolo não encontrado.",
+                404
+            )
+
+        if (
+            usuario["tipo_usuario"].lower()
+            not in {
+                "coordenacao",
+                "coordenador",
+                "admin",
+                "administrador"
+            }
+            and solicitacao["matricula"] != usuario["matricula"]
+        ):
+            return erro_json(
+                "Você não tem permissão para enviar mensagens nesta solicitação.",
+                403
+            )
+
+        executar(
+            """
+            INSERT INTO mensagens (
+                conteudo,
+                data_envio,
+                id_solicitacao,
+                id_usuario
+            )
+            VALUES (%s, NOW(), %s, %s)
+            """,
+            (
+                texto,
+                solicitacao["id_solicitacao"],
+                usuario["id_usuarios"]
+            ),
+            commit=True
+        )
+
+        return jsonify({
+            "sucesso": True,
+            "mensagem": {
+                "remetente": usuario["nome"],
+                "texto": texto,
+                "hora": datetime.now().strftime("%H:%M")
+            }
+        }), 201
+
+    except Error:
+        app.logger.exception("Falha ao salvar mensagem.")
+
+        return erro_json(
+            "Não foi possível enviar a mensagem.",
+            500
+        )
+
+@app.route(
+    "/api/solicitacoes/<path:protocolo>/resolver",
+    methods=["POST"]
+)
+@login_obrigatorio
+def api_resolver_solicitacao(protocolo):
+    protocolo = normalizar_protocolo(protocolo)
+    dados = request.get_json(silent=True) or {}
+
+    resolvido = bool(dados.get("resolvido", False))
+    usuario = usuario_atual()
+
+    try:
+        solicitacao = buscar_solicitacao(protocolo)
+
+        if not solicitacao:
+            return erro_json(
+                "Protocolo não encontrado.",
+                404
+            )
+
+        if (
+            usuario["tipo_usuario"].lower()
+            not in {
+                "coordenacao",
+                "coordenador",
+                "admin",
+                "administrador"
+            }
+            and solicitacao["matricula"] != usuario["matricula"]
+        ):
+            return erro_json(
+                "Você não tem permissão para alterar esta solicitação.",
+                403
+            )
+
+        nome_status = (
+            "Resolvido" if resolvido else "Em Andamento"
+        )
+
+        status = executar(
+            """
+            SELECT id_status
+            FROM status_solicitacao
+            WHERE nome = %s
+            LIMIT 1
+            """,
+            (nome_status,),
+            buscar="um"
+        )
+
+        if not status:
+            return erro_json(
+                f"Cadastre o status '{nome_status}' na tabela status_solicitacao.",
+                500
+            )
+
+        observacao = (
+            "Solicitação marcada como resolvida pelo usuário."
+            if resolvido
+            else "Usuário informou que a solicitação ainda não foi resolvida."
+        )
+
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        try:
+            cursor.execute(
+                """
+                UPDATE solicitacao
+                SET id_status = %s
+                WHERE id_solicitacao = %s
+                """,
+                (
+                    status["id_status"],
+                    solicitacao["id_solicitacao"]
+                )
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO historico_status (
+                    data_alteracao,
+                    observacao,
+                    id_solicitacao,
+                    id_status,
+                    id_usuario
+                )
+                VALUES (NOW(), %s, %s, %s, %s)
+                """,
+                (
+                    observacao,
+                    solicitacao["id_solicitacao"],
+                    status["id_status"],
+                    usuario["id_usuarios"]
+                )
+            )
+
+            conexao.commit()
+
+        except Exception:
+            conexao.rollback()
+            raise
+
+        finally:
+            cursor.close()
+            conexao.close()
+
+        return jsonify({
+            "sucesso": True,
+            "mensagem": (
+                "Solicitação atualizada."
+                if resolvido
+                else "Solicitação encaminhada para reanálise."
+            )
+        })
+
+    except Error:
+        app.logger.exception("Falha ao atualizar status.")
+
+        return erro_json(
+            "Não foi possível atualizar o status.",
+            500
+        )
+
+@app.route(
+    "/api/coordenacao/metricas",
+    methods=["GET"]
+)
+@coordenacao_obrigatoria
+def api_metricas_coordenacao():
+    try:
+        resumo = executar(
+            """
+            SELECT
+                SUM(
+                    CASE
+                        WHEN LOWER(st.nome) NOT IN (
+                            'resolvido',
+                            'resolvida',
+                            'encerrado',
+                            'encerrada'
+                        )
+                        THEN 1 ELSE 0
+                    END
+                ) AS abertas,
+
+                SUM(
+                    CASE
+                        WHEN s.prioridade = 'Alta'
+                        AND LOWER(st.nome) NOT IN (
+                            'resolvido',
+                            'resolvida',
+                            'encerrado',
+                            'encerrada'
+                        )
+                        THEN 1 ELSE 0
+                    END
+                ) AS alta_prioridade,
+
+                SUM(
+                    CASE
+                        WHEN s.prioridade = 'Média'
+                        AND LOWER(st.nome) NOT IN (
+                            'resolvido',
+                            'resolvida',
+                            'encerrado',
+                            'encerrada'
+                        )
+                        THEN 1 ELSE 0
+                    END
+                ) AS media_prioridade,
+
+                SUM(
+                    CASE
+                        WHEN s.prioridade = 'Baixa'
+                        AND LOWER(st.nome) NOT IN (
+                            'resolvido',
+                            'resolvida',
+                            'encerrado',
+                            'encerrada'
+                        )
+                        THEN 1 ELSE 0
+                    END
+                ) AS baixa_prioridade,
+
+                SUM(
+                    CASE
+                        WHEN LOWER(st.nome) LIKE '%andamento%'
+                        THEN 1 ELSE 0
+                    END
+                ) AS em_andamento,
+
+                SUM(
+                    CASE
+                        WHEN LOWER(st.nome) IN (
+                            'resolvido',
+                            'resolvida',
+                            'encerrado',
+                            'encerrada'
+                        )
+                        AND DATE(s.data_criacao) = CURDATE()
+                        THEN 1 ELSE 0
+                    END
+                ) AS resolvidas_hoje
+
+            FROM solicitacao s
+            LEFT JOIN status_solicitacao st
+                ON st.id_status = s.id_status
+            """,
+            buscar="um"
+        ) or {}
+
+        fila = executar(
+            """
+            SELECT
+                s.protocolo AS codigo,
+                s.titulo,
+                s.prioridade,
+                s.prazo,
+                s.data_criacao,
+                u.nome AS aluno,
+                c.nome AS categoria,
+                st.nome AS status
+            FROM solicitacao s
+            JOIN usuarios u
+                ON u.id_usuarios = s.id_usuario
+            LEFT JOIN categorias c
+                ON c.id_categorias = s.id_categoria
+            LEFT JOIN status_solicitacao st
+                ON st.id_status = s.id_status
+            WHERE LOWER(COALESCE(st.nome, 'recebido'))
+                NOT IN (
+                    'resolvido',
+                    'resolvida',
+                    'encerrado',
+                    'encerrada'
+                )
+            ORDER BY
+                FIELD(s.prioridade, 'Alta', 'Média', 'Baixa'),
+                s.prazo IS NULL,
+                s.prazo ASC,
+                s.data_criacao ASC
+            """,
+            buscar="todos"
+        ) or []
+
+        for item in fila:
+            if item.get("prazo"):
+                item["prazo"] = item["prazo"].isoformat()
+
+            if item.get("data_criacao"):
+                item["data_criacao"] = (
+                    item["data_criacao"].isoformat(sep=" ")
+                )
+
+        kpis = {
+            chave: int(valor or 0)
+            for chave, valor in resumo.items()
+        }
+
+        return jsonify({
+            "sucesso": True,
+            "kpis": kpis,
+            "fila_inteligente": fila
+        })
+
+    except Error:
+        app.logger.exception(
+            "Falha ao carregar painel da coordenação."
+        )
+
+        return erro_json(
+            "Não foi possível carregar as métricas.",
+            500
+        )
+
+@app.route(
+    "/api/solicitacoes/<path:protocolo>/status",
+    methods=["PATCH"]
+)
+@coordenacao_obrigatoria
+def api_atualizar_status(protocolo):
+    protocolo = normalizar_protocolo(protocolo)
+    dados = request.get_json(silent=True) or {}
+
+    nome_status = str(
+        dados.get("status", "")
+    ).strip()
+
+    observacao = (
+        str(dados.get("observacao", "")).strip()
+        or "Status atualizado pela coordenação."
     )
 
-  hora_atual = datetime.now().strftime("%H:%M")
-  nova_msg = {"remetente": "Você", "texto": texto, "hora": hora_atual}
+    try:
+        solicitacao = buscar_solicitacao(protocolo)
 
-  SOLICITACOES_DB[protocolo]["mensagens"].append(nova_msg)
-  return jsonify({"sucesso": True, "mensagem": nova_msg})
+        if not solicitacao:
+            return erro_json(
+                "Protocolo não encontrado.",
+                404
+            )
 
+        status = executar(
+            """
+            SELECT id_status
+            FROM status_solicitacao
+            WHERE nome = %s
+            LIMIT 1
+            """,
+            (nome_status,),
+            buscar="um"
+        )
 
-@app.route("/api/solicitacoes/<protocolo>/resolver", methods=["POST"])
-def api_resolver_solicitacao(protocolo):
-  protocolo = f"#{protocolo}" if not protocolo.startswith("#") else protocolo
-  if protocolo not in SOLICITACOES_DB:
-    return jsonify({"sucesso": False, "erro": "Protocolo não encontrado."}), 404
+        if not status:
+            return erro_json(
+                "Status não encontrado no banco de dados."
+            )
 
-  dados = request.get_json() or {}
-  resolvido = dados.get("resolvido", False)
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
 
-  if resolvido:
-    SOLICITACOES_DB[protocolo]["status"] = "Resolvido"
-    msg = "Solicitação encerrada com sucesso."
-  else:
-    SOLICITACOES_DB[protocolo]["status"] = "Em Andamento (Reanálise)"
-    msg = "A coordenação foi notificada para reanálise."
+        try:
+            cursor.execute(
+                """
+                UPDATE solicitacao
+                SET id_status = %s
+                WHERE id_solicitacao = %s
+                """,
+                (
+                    status["id_status"],
+                    solicitacao["id_solicitacao"]
+                )
+            )
 
-  return jsonify({"sucesso": True, "mensagem": msg})
+            cursor.execute(
+                """
+                INSERT INTO historico_status (
+                    data_alteracao,
+                    observacao,
+                    id_solicitacao,
+                    id_status,
+                    id_usuario
+                )
+                VALUES (NOW(), %s, %s, %s, %s)
+                """,
+                (
+                    observacao,
+                    solicitacao["id_solicitacao"],
+                    status["id_status"],
+                    usuario_atual()["id_usuarios"]
+                )
+            )
 
+            conexao.commit()
 
-@app.route("/api/coordenacao/metricas", methods=["GET"])
-def api_metricas_coordenacao():
-  fila = list(SOLICITACOES_DB.values())
-  return jsonify(
-      {"sucesso": True, "kpis": METRICAS_GLOBAL, "fila_inteligente": fila}
-  )
+        except Exception:
+            conexao.rollback()
+            raise
 
+        finally:
+            cursor.close()
+            conexao.close()
+
+        return jsonify({
+            "sucesso": True,
+            "mensagem": "Status atualizado."
+        })
+
+    except Error:
+        app.logger.exception("Falha ao atualizar status.")
+
+        return erro_json(
+            "Não foi possível atualizar o status.",
+            500
+        )
+
+@app.route(
+    "/api/anexos/<int:id_anexo>/download",
+    methods=["GET"]
+)
+@login_obrigatorio
+def api_baixar_anexo(id_anexo):
+    try:
+        anexo = executar(
+            """
+            SELECT
+                a.nome_arquivo,
+                a.caminho_arquivo,
+                s.id_usuario,
+                u.matricula
+            FROM anexos a
+            JOIN solicitacao s
+                ON s.id_solicitacao = a.id_solicitacao
+            JOIN usuarios u
+                ON u.id_usuarios = s.id_usuario
+            WHERE a.id_anexos = %s
+            LIMIT 1
+            """,
+            (id_anexo,),
+            buscar="um"
+        )
+
+        if not anexo:
+            return erro_json(
+                "Anexo não encontrado.",
+                404
+            )
+
+        usuario = usuario_atual()
+
+        if (
+            usuario["tipo_usuario"].lower()
+            not in {
+                "coordenacao",
+                "coordenador",
+                "admin",
+                "administrador"
+            }
+            and anexo["matricula"] != usuario["matricula"]
+        ):
+            return erro_json(
+                "Você não tem permissão para baixar este arquivo.",
+                403
+            )
+
+        return send_from_directory(
+            UPLOAD_DIR,
+            anexo["caminho_arquivo"],
+            as_attachment=True,
+            download_name=anexo["nome_arquivo"]
+        )
+
+    except Error:
+        app.logger.exception("Falha ao consultar anexo.")
+
+        return erro_json(
+            "Não foi possível baixar o anexo.",
+            500
+        )
+
+@app.errorhandler(413)
+def arquivo_grande(_erro):
+    return erro_json(
+        "O tamanho total dos arquivos ultrapassa 10 MB.",
+        413
+    )
+
+@app.errorhandler(500)
+def erro_interno(_erro):
+    return jsonify({
+        "sucesso": False,
+        "erro": "Ocorreu um erro interno no servidor."
+    }), 500
 
 if __name__ == "__main__":
-  app.run(debug=True, port=5000)
+    app.run(
+        host="127.0.0.1",
+        port=5000,
+        debug=True
+    )
