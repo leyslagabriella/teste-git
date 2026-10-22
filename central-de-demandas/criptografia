@@ -1,0 +1,116 @@
+```python
+import os
+import base64
+import secrets
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+
+class CriptografiaAES:
+    """
+    Criptografia AES-256-GCM para proteger dados confidenciais.
+    """
+
+    TAMANHO_CHAVE = 32
+    TAMANHO_NONCE = 12
+
+    def __init__(self, chave=None):
+        if chave is None:
+            chave = os.getenv("AES_SECRET_KEY")
+
+        if not chave:
+            raise RuntimeError(
+                "Configure AES_SECRET_KEY nas variaveis de ambiente."
+            )
+
+        try:
+            self.chave = base64.urlsafe_b64decode(chave)
+        except Exception as erro:
+            raise ValueError("Chave AES invalida.") from erro
+
+        if len(self.chave) != self.TAMANHO_CHAVE:
+            raise ValueError(
+                "A chave AES precisa ter exatamente 32 bytes."
+            )
+
+        self.cifra = AESGCM(self.chave)
+
+    @staticmethod
+    def gerar_chave():
+        chave = AESGCM.generate_key(bit_length=256)
+
+        return base64.urlsafe_b64encode(chave).decode("utf-8")
+
+    def criptografar(self, texto):
+        if not isinstance(texto, str):
+            raise TypeError("O texto precisa ser uma string.")
+
+        nonce = secrets.token_bytes(self.TAMANHO_NONCE)
+
+        dados_cifrados = self.cifra.encrypt(
+            nonce,
+            texto.encode("utf-8"),
+            None
+        )
+
+        resultado = nonce + dados_cifrados
+
+        return base64.urlsafe_b64encode(resultado).decode("utf-8")
+
+    def descriptografar(self, texto_cifrado):
+        if not isinstance(texto_cifrado, str):
+            raise TypeError("O texto cifrado precisa ser uma string.")
+
+        try:
+            dados = base64.urlsafe_b64decode(texto_cifrado)
+
+            if len(dados) < self.TAMANHO_NONCE + 16:
+                raise ValueError("Dados cifrados invalidos.")
+
+            nonce = dados[:self.TAMANHO_NONCE]
+            conteudo = dados[self.TAMANHO_NONCE:]
+
+            texto_original = self.cifra.decrypt(
+                nonce,
+                conteudo,
+                None
+            )
+
+            return texto_original.decode("utf-8")
+
+        except Exception as erro:
+            raise ValueError(
+                "Nao foi possivel descriptografar. "
+                "A chave pode estar incorreta ou os dados foram alterados."
+            ) from erro
+
+
+def demonstracao_aes():
+    chave = CriptografiaAES.gerar_chave()
+
+    criptografia = CriptografiaAES(chave)
+
+    mensagem = "Teste de criptografia da Central de Demandas."
+
+    cifrado = criptografia.criptografar(mensagem)
+    original = criptografia.descriptografar(cifrado)
+
+    return {
+        "mensagem_original": mensagem,
+        "mensagem_cifrada": cifrado,
+        "mensagem_recuperada": original
+    }
+
+
+if __name__ == "__main__":
+    resultado = demonstracao_aes()
+
+    print("Mensagem original:")
+    print(resultado["mensagem_original"])
+
+    print("\nMensagem cifrada:")
+    print(resultado["mensagem_cifrada"])
+
+    print("\nMensagem recuperada:")
+    print(resultado["mensagem_recuperada"])
+```
