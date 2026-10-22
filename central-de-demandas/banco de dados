@@ -67,4 +67,9 @@ CREATE TABLE mensagens (
         FOREIGN KEY (id_usuario)
         REFERENCES usuarios(id_usuarios)
 );
-
+-- 6. HISTORICO DE STATUS 
+CREATE TABLE historico_status (
+     id_historico BIGINT AUTO_INCREMENT PRIMARY KEY,
+     data_alteracao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     
+     
