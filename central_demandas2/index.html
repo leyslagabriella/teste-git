@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central de Demandas | IFPI</title>
+<style>
+:root{--green:#006b3c;--green2:#087a49;--bg:#f5f7f8;--line:#e0e5e9;--muted:#8492a6;--text:#142033}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:var(--bg)}
+header{height:70px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(18px,6vw,90px);gap:20px}
+.logo{display:flex;align-items:center;gap:12px;font-weight:bold}.mark{display:grid;grid-template-columns:repeat(3,7px);gap:3px}.mark i{width:7px;height:7px;border-radius:50%;background:#fff}.logo small{display:block;font-weight:400;font-size:12px;margin-top:3px}
+nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}nav button{background:transparent;color:white;border:0;padding:11px 14px;border-radius:9px;font-weight:600;cursor:pointer}nav button.active,nav button:hover{background:#fff;color:var(--green)}
+main{max-width:1000px;margin:42px auto;padding:0 20px 60px}.view{display:none}.view.active{display:block}
+.card{background:white;border:1px solid var(--line);border-radius:15px;box-shadow:0 2px 5px #152b3b0c;padding:26px;max-width:790px;margin:0 auto}
+h1,h2,h3{margin-top:0}h2{font-size:23px;margin-bottom:6px}.sub{color:var(--muted);font-size:14px;margin:0 0 23px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:flex;flex-direction:column;gap:7px}.wide{grid-column:1/-1}label{font-size:13px;font-weight:700}
+input,select,textarea{font:inherit;width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:7px;background:white;color:var(--text);min-height:42px}
+textarea{min-height:100px;resize:vertical}input:focus,select:focus,textarea:focus{outline:2px solid #006b3c22;border-color:var(--green)}
+.categories{display:flex;gap:7px;flex-wrap:wrap}.categories label{font-weight:400;border:1px solid var(--line);padding:8px 10px;border-radius:7px;cursor:pointer}.categories input{width:auto;min-height:0;margin:0 4px 0 0}
+.priority{background:#f2f7f4;border:1px solid #dce9e1;border-radius:12px;padding:18px}
+.priority h4{font-size:12px;letter-spacing:.07em;margin:0 0 5px;color:var(--green);font-weight:800}
+.priority-intro{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.45}
+.question{display:flex;justify-content:space-between;align-items:center;gap:18px;font-size:13px;margin:9px 0;background:#fff;border:1px solid #e3ebe6;border-radius:9px;padding:13px 14px;min-height:58px}
+.question-text{font-weight:600;line-height:1.4;max-width:75%}
+.choices{display:flex;gap:5px;white-space:nowrap;background:#f2f5f3;padding:4px;border-radius:8px}
+.choices label{font-weight:700;font-size:12px;border:1px solid transparent;background:transparent;color:#68766e;border-radius:6px;padding:7px 12px;cursor:pointer;transition:.15s}
+.choices input{position:absolute;opacity:0;width:1px;height:1px;min-height:0}
+.choices label:has(input:checked){background:var(--green);color:#fff;box-shadow:0 1px 3px #123b251f}
+.choices label:focus-within{outline:2px solid #006b3c55;outline-offset:2px}
+@media(max-width:560px){.question{align-items:flex-start;flex-direction:column;gap:10px}.question-text{max-width:100%}.choices{width:100%}.choices label{flex:1;text-align:center}}
+button.primary{background:var(--green);color:white;border:0;border-radius:8px;padding:12px 19px;font-weight:bold;cursor:pointer}button.primary:hover{background:#00542f}
+.form-actions{margin-top:19px}.hint{font-size:12px;color:var(--muted)}.notice{display:none;margin-top:16px;padding:12px 14px;background:#eaf5ef;color:#075c36;border:1px solid #c4e2d0;border-radius:8px;font-size:14px;line-height:1.5}.notice.show{display:block}.notice.error{background:#fff1f0;color:#a32218;border-color:#f0c5c0}
+.login-layout{min-height:calc(100vh - 70px);display:grid;grid-template-columns:46% 54%;background:white}.login-brand{background:var(--green);color:white;padding:42px;display:flex;flex-direction:column;justify-content:space-between;min-height:610px}.login-brand h2{font-size:34px;line-height:1.25;max-width:400px}.login-brand p{max-width:420px;line-height:1.6}.login-form{display:flex;align-items:center;justify-content:center;padding:35px}.login-form .card{border:0;box-shadow:none;width:100%;max-width:480px}.login-form h1{font-size:34px;margin-bottom:8px}.login-form .field{margin:17px 0}.login-form button.primary{width:100%;margin-top:9px}
+.track-row{display:flex;gap:12px;align-items:center}.track-row input{flex:1}
+footer{background:var(--green);color:#d9f4e5;padding:19px clamp(18px,6vw,90px);font-size:12px;display:flex;justify-content:space-between;gap:10px}
+@media(max-width:720px){header{height:auto;min-height:70px;align-items:flex-start;flex-direction:column;padding:16px 20px}nav{width:100%}nav button{padding:9px 10px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.login-layout{grid-template-columns:1fr}.login-brand{min-height:260px;padding:28px}.login-brand h2{font-size:27px}.login-form{padding:15px}.track-row{flex-direction:column;align-items:stretch}footer{flex-direction:column}}
+</style>
+</head>
+<body>
+<section id="loginView" class="view active">
+ <div class="login-layout">
+  <aside class="login-brand">
+   <div class="logo"><span class="mark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>IFPI<small>Campus Paulistana</small></span></div>
+   <div><h2>Demandas acadêmicas<br>em um só lugar.</h2><p>Uma comunicação mais simples, transparente e eficiente entre estudantes e coordenação.</p></div>
+   <small>Instituto Federal do Piauí</small>
+  </aside>
+  <div class="login-form"><div class="card">
+   <h1>Central de Demandas</h1><p class="sub">Entre com seus dados para continuar</p>
+   <form id="loginForm" novalidate>
+    <div class="field"><label for="matriculaLogin">Matrícula *</label><input id="matriculaLogin" name="matricula" required minlength="3" maxlength="20" placeholder="Digite sua matrícula"></div>
+    <div class="field"><label for="senhaLogin">Senha *</label><input id="senhaLogin" name="senha" type="password" required minlength="6" maxlength="64" placeholder="Digite sua senha"></div>
+    <p style="text-align:right;color:#006b3c;font-size:13px">Esqueci minha senha</p>
+    <button class="primary" type="submit">Entrar</button><div class="notice" role="status"></div>
+   </form>
+   <p class="hint" style="text-align:center;margin-top:28px">Acesso destinado aos usuários autorizados do IFPI</p>
+  </div></div>
+ </div>
+</section>
+<div id="appView" class="view">
+<header>
+ <div class="logo"><span class="mark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>IFPI<small>Central de Demandas da Coordenação</small></span></div>
+ <nav><button type="button" data-view="home" class="active">Página Inicial</button><button type="button" data-view="new">Área do Aluno</button><button type="button" data-view="track">Acompanhar</button><button type="button" id="logout">Sair</button></nav>
+</header>
+<main>
+ <section id="home" class="view active"><div class="card"><h2>Bem-vindo à Central de Demandas</h2><p class="sub">Utilize o sistema para registrar e acompanhar solicitações encaminhadas à coordenação.</p><div class="grid"><button class="primary" type="button" data-view="new">Nova solicitação</button><button class="primary" type="button" data-view="track">Acompanhar solicitação</button></div></div></section>
+ <section id="new" class="view"><div class="card">
+  <h2>Nova Solicitação</h2><p class="sub">Preencha o formulário para registrar sua demanda.</p>
+  <form id="requestForm" novalidate><div class="grid">
+   <div class="field"><label for="nome">Nome Completo *</label><input id="nome" name="nome" required minlength="3" maxlength="100" placeholder="Ex: João Pedro Carvalho"></div>
+   <div class="field"><label for="matricula">Matrícula *</label><input id="matricula" name="matricula" required minlength="3" maxlength="20" placeholder="Ex: 20231ADS0001"></div>
+   <div class="field"><label for="curso">Curso *</label><input id="curso" name="curso" required minlength="2" maxlength="100" placeholder="Ex: Análise e Desenvolvimento de Sistemas"></div>
+   <div class="field"><label for="turma">Turma *</label><input id="turma" name="turma" required minlength="2" maxlength="30" placeholder="Ex: 2023.1"></div>
+   <div class="field wide"><label>Categoria do Problema *</label><div class="categories">
+    <label><input type="radio" name="categoria" value="Matrícula" required>Matrícula</label><label><input type="radio" name="categoria" value="Questões Acadêmicas">Questões Acadêmicas</label><label><input type="radio" name="categoria" value="Documentação">Documentação</label><label><input type="radio" name="categoria" value="Horários">Horários</label><label><input type="radio" name="categoria" value="Professores">Professores</label><label><input type="radio" name="categoria" value="Estrutura">Estrutura</label><label><input type="radio" name="categoria" value="Outros">Outros</label>
+   </div></div>
+   <div class="field wide priority"><h4>AVALIAÇÃO DA PRIORIDADE</h4>
+    <p class="priority-intro">Responda às perguntas abaixo para ajudar a coordenação a compreender o impacto da solicitação.</p>
+    <div class="question"><span class="question-text">1. A situação impede você de realizar alguma atividade acadêmica? *</span><span class="choices"><label><input type="radio" name="impede" value="Sim" required> Sim</label><label><input type="radio" name="impede" value="Não"> Não</label></span></div>
+    <div class="question"><span class="question-text">2. Existe um prazo próximo para resolver essa situação (até 7 dias)? *</span><span class="choices"><label><input type="radio" name="prazo" value="Sim" required> Sim</label><label><input type="radio" name="prazo" value="Não"> Não</label></span></div>
+    <div class="question"><span class="question-text">3. Essa situação também afeta outros estudantes ou pessoas do setor? *</span><span class="choices"><label><input type="radio" name="colegas" value="Sim" required> Sim</label><label><input type="radio" name="colegas" value="Não"> Não</label></span></div>
+   </div>
+   <div class="field wide"><label for="descricao">Descrição Detalhada *</label><textarea id="descricao" name="descricao" required minlength="10" maxlength="1500" placeholder="Descreva seu problema com o máximo de detalhes possível..."></textarea><span class="hint">De 10 a 1500 caracteres.</span></div>
+   <div class="field wide"><label for="anexo">Anexos (PDF ou Fotos)</label><input id="anexo" name="anexo" type="file" accept=".pdf,.png,.jpg,.jpeg" multiple><span class="hint">Opcional. Formatos aceitos: PDF, PNG ou JPG. Nesta demonstração, os arquivos não são enviados para servidor.</span></div>
+  </div><div class="form-actions"><button class="primary" type="submit">Enviar Solicitação</button></div><div class="notice" role="status"></div></form>
+ </div></section>
+ <section id="track" class="view"><div class="card">
+  <h2>Acompanhar Solicitação</h2><p class="sub">Digite o código do protocolo para consultar sua demanda.</p>
+  <form id="trackForm" novalidate><div class="track-row"><input id="protocolo" name="protocolo" required pattern="#?[0-9]{4,}-[0-9]{3}" maxlength="15" placeholder="Digite o código do protocolo (ex: #2026-015)"><button class="primary" type="submit">Buscar</button></div><p class="hint">Exemplo de formato: #2026-015</p><div class="notice" role="status"></div></form>
+ </div></section>
+</main>
+<footer><span>Instituto Federal do Piauí — Central de Demandas da Coordenação</span><span>v1.0 · 2026</span></footer>
+</div>
+<script>
+const loginView=document.getElementById('loginView'),appView=document.getElementById('appView');
+function showAppView(id){document.querySelectorAll('#appView main .view').forEach(v=>v.classList.toggle('active',v.id===id));document.querySelectorAll('nav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id));}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>showAppView(b.dataset.view)));
+document.getElementById('loginForm').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget,n=f.querySelector('.notice');n.className='notice show';if(!f.checkValidity()){f.reportValidity();n.classList.add('error');n.textContent='Confira a matrícula e a senha. A senha deve ter pelo menos 6 caracteres.';return;}n.textContent='Dados validados. Demonstração: o login real depende da integração com o sistema de usuários.';setTimeout(()=>{loginView.classList.remove('active');appView.classList.add('active');showAppView('home');},700);});
+document.getElementById('logout').addEventListener('click',()=>{appView.classList.remove('active');loginView.classList.add('active');document.getElementById('loginForm').reset();});
+document.getElementById('requestForm').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget,n=f.querySelector('.notice');n.className='notice show';if(!f.checkValidity()){f.reportValidity();n.classList.add('error');n.textContent='Existem campos obrigatórios ou inválidos. Revise o formulário.';return;}const data=Object.fromEntries(new FormData(f).entries());const yes=[data.impede,data.prazo,data.colegas].filter(v=>v==='Sim').length;const prioridade=yes===3?'Alta':yes===2?'Média':'Baixa';n.textContent=`Solicitação recebida e validada nesta demonstração. Prioridade sugerida pelas respostas: ${prioridade}. Os dados ainda não são armazenados em banco de dados.`;f.reset();});
+document.getElementById('trackForm').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget,n=f.querySelector('.notice');n.className='notice show';if(!f.checkValidity()){f.reportValidity();n.classList.add('error');n.textContent='Digite um protocolo no formato #2026-015.';return;}n.textContent='Formato do protocolo validado. A consulta real será possível quando o sistema estiver conectado ao banco de dados.';});
+</script>
+</body>
+</html>
