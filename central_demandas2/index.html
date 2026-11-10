@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central de Demandas | IFPI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<section id="loginView" class="view active">
+ <div class="login-layout">
+  <aside class="login-brand">
+   <div class="logo"><span class="mark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>IFPI<small>Campus Paulistana</small></span></div>
+   <div><h2>Demandas acadêmicas<br>em um só lugar.</h2><p>Uma comunicação mais simples, transparente e eficiente entre estudantes e coordenação.</p></div>
+   <small>Instituto Federal do Piauí</small>
+  </aside>
+  <div class="login-form"><div class="card">
+   <h1>Central de Demandas</h1><p class="sub">Entre com seus dados para continuar</p>
+   <form id="loginForm" novalidate>
+    <div class="field"><label for="matriculaLogin">Matrícula *</label><input id="matriculaLogin" name="matricula" required minlength="3" maxlength="20" placeholder="Digite sua matrícula"></div>
+    <div class="field"><label for="senhaLogin">Senha *</label><input id="senhaLogin" name="senha" type="password" required minlength="6" maxlength="64" placeholder="Digite sua senha"></div>
+    <p style="text-align:right;color:#006b3c;font-size:13px">Esqueci minha senha</p>
+    <button class="primary" type="submit">Entrar</button><div class="notice" role="status"></div>
+   </form>
+   <p class="hint" style="text-align:center;margin-top:28px">Acesso destinado aos usuários autorizados do IFPI</p>
+  </div></div>
+ </div>
+</section>
+<div id="appView" class="view">
+<header>
+ <div class="logo"><span class="mark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>IFPI<small>Central de Demandas da Coordenação</small></span></div>
+ <nav><button type="button" data-view="home" class="active">Página Inicial</button><button type="button" data-view="new">Área do Aluno</button><button type="button" data-view="track">Acompanhar</button><button type="button" id="logout">Sair</button></nav>
+</header>
+<main>
+ <section id="home" class="view active"><div class="card"><h2>Bem-vindo à Central de Demandas</h2><p class="sub">Utilize o sistema para registrar e acompanhar solicitações encaminhadas à coordenação.</p><div class="grid"><button class="primary" type="button" data-view="new">Nova solicitação</button><button class="primary" type="button" data-view="track">Acompanhar solicitação</button></div></div></section>
+ <section id="new" class="view"><div class="card">
+  <h2>Nova Solicitação</h2><p class="sub">Preencha o formulário para registrar sua demanda.</p>
+  <form id="requestForm" novalidate><div class="grid">
+   <div class="field"><label for="nome">Nome Completo *</label><input id="nome" name="nome" required minlength="3" maxlength="100" placeholder="Ex: João Pedro Carvalho"></div>
+   <div class="field"><label for="matricula">Matrícula *</label><input id="matricula" name="matricula" required minlength="3" maxlength="20" placeholder="Ex: 20231ADS0001"></div>
+   <div class="field"><label for="curso">Curso *</label><input id="curso" name="curso" required minlength="2" maxlength="100" placeholder="Ex: Análise e Desenvolvimento de Sistemas"></div>
+   <div class="field"><label for="turma">Turma *</label><input id="turma" name="turma" required minlength="2" maxlength="30" placeholder="Ex: 2023.1"></div>
+   <div class="field wide"><label>Categoria do Problema *</label><div class="categories">
+    <label><input type="radio" name="categoria" value="Matrícula" required>Matrícula</label><label><input type="radio" name="categoria" value="Questões Acadêmicas">Questões Acadêmicas</label><label><input type="radio" name="categoria" value="Documentação">Documentação</label><label><input type="radio" name="categoria" value="Horários">Horários</label><label><input type="radio" name="categoria" value="Professores">Professores</label><label><input type="radio" name="categoria" value="Estrutura">Estrutura</label><label><input type="radio" name="categoria" value="Outros">Outros</label>
+   </div></div>
+   <div class="field wide priority"><h4>AVALIAÇÃO DA PRIORIDADE</h4>
+    <p class="priority-intro">Responda às perguntas abaixo para ajudar a coordenação a compreender o impacto da solicitação.</p>
+    <div class="question"><span class="question-text">1. A situação impede você de realizar alguma atividade acadêmica? *</span><span class="choices"><label><input type="radio" name="impede" value="Sim" required> Sim</label><label><input type="radio" name="impede" value="Não"> Não</label></span></div>
+    <div class="question"><span class="question-text">2. Existe um prazo próximo para resolver essa situação (até 7 dias)? *</span><span class="choices"><label><input type="radio" name="prazo" value="Sim" required> Sim</label><label><input type="radio" name="prazo" value="Não"> Não</label></span></div>
+    <div class="question"><span class="question-text">3. Essa situação também afeta outros estudantes ou pessoas do setor? *</span><span class="choices"><label><input type="radio" name="colegas" value="Sim" required> Sim</label><label><input type="radio" name="colegas" value="Não"> Não</label></span></div>
+   </div>
+   <div class="field wide"><label for="descricao">Descrição Detalhada *</label><textarea id="descricao" name="descricao" required minlength="10" maxlength="1500" placeholder="Descreva seu problema com o máximo de detalhes possível..."></textarea><span class="hint">De 10 a 1500 caracteres.</span></div>
+   <div class="field wide"><label for="anexo">Anexos (PDF ou Fotos)</label><input id="anexo" name="anexo" type="file" accept=".pdf,.png,.jpg,.jpeg" multiple><span class="hint">Opcional. Formatos aceitos: PDF, PNG ou JPG. Nesta demonstração, os arquivos não são enviados para servidor.</span></div>
+  </div><div class="form-actions"><button class="primary" type="submit">Enviar Solicitação</button></div><div class="notice" role="status"></div></form>
+ </div></section>
+ <section id="track" class="view"><div class="card">
+  <h2>Acompanhar Solicitação</h2><p class="sub">Digite o código do protocolo para consultar sua demanda.</p>
+  <form id="trackForm" novalidate><div class="track-row"><input id="protocolo" name="protocolo" required pattern="#?[0-9]{4,}-[0-9]{3}" maxlength="15" placeholder="Digite o código do protocolo (ex: #2026-015)"><button class="primary" type="submit">Buscar</button></div><p class="hint">Exemplo de formato: #2026-015</p><div class="notice" role="status"></div></form>
+ </div></section>
+</main>
+<footer><span>Instituto Federal do Piauí — Central de Demandas da Coordenação</span><span>v1.0 · 2026</span></footer>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
