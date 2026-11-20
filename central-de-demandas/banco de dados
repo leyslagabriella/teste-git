@@ -1,4 +1,7 @@
-CREATE DATABASE IF NOT EXISTS central_demandas;
+CREATE DATABASE IF NOT EXISTS central_demandas
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
 USE central_demandas;
 
 CREATE TABLE cursos (
@@ -6,75 +9,76 @@ CREATE TABLE cursos (
     nome_curso VARCHAR(100) NOT NULL UNIQUE
 );
 
-CREATE TABLE turmas (
-    id_turma INT AUTO_INCREMENT PRIMARY KEY,
-    nome_turma VARCHAR(50) NOT NULL,
-    id_curso INT NOT NULL,
-    ano VARCHAR(4) NOT NULL,
-    FOREIGN KEY (id_curso) REFERENCES cursos(id_curso)
-);
-
 CREATE TABLE usuarios (
     id_usuario INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     matricula VARCHAR(20) NOT NULL UNIQUE,
-    email VARCHAR(100),
     senha_hash VARCHAR(255) NOT NULL,
     tipo_usuario VARCHAR(20) NOT NULL,
-    id_curso INT,
-    id_turma INT,
-    data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_curso) REFERENCES cursos(id_curso),
-    FOREIGN KEY (id_turma) REFERENCES turmas(id_turma)
+    id_curso INT NULL,
+    turma VARCHAR(30) NULL,
+    FOREIGN KEY (id_curso) REFERENCES cursos(id_curso)
 );
 
 CREATE TABLE categorias (
     id_categoria INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL UNIQUE,
-    descricao TEXT
+    descricao TEXT NULL
 );
 
 CREATE TABLE status_solicitacao (
     id_status INT AUTO_INCREMENT PRIMARY KEY,
-    nome_status VARCHAR(50) NOT NULL UNIQUE,
-    descricao VARCHAR(255)
+    nome VARCHAR(50) NOT NULL UNIQUE,
+    descricao TEXT NULL
 );
 
 CREATE TABLE solicitacoes (
     id_solicitacao INT AUTO_INCREMENT PRIMARY KEY,
     protocolo VARCHAR(30) NOT NULL UNIQUE,
-    assunto VARCHAR(150) NOT NULL,
+    titulo VARCHAR(150) NOT NULL,
     descricao TEXT NOT NULL,
+    data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+    prazo DATE NULL,
+    prioridade VARCHAR(20) DEFAULT 'media',
+    coletiva BOOLEAN DEFAULT FALSE,
     id_usuario INT NOT NULL,
     id_categoria INT NOT NULL,
     id_status INT NOT NULL,
-    data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-    data_atualizacao DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
     FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria),
     FOREIGN KEY (id_status) REFERENCES status_solicitacao(id_status)
 );
 
-CREATE TABLE historico (
-    id_historico INT AUTO_INCREMENT PRIMARY KEY,
-    id_solicitacao INT NOT NULL,
+CREATE TABLE mensagens (
+    id_mensagem INT AUTO_INCREMENT PRIMARY KEY,
+    conteudo TEXT NOT NULL,
+    data_envio DATETIME DEFAULT CURRENT_TIMESTAMP,
     id_usuario INT NOT NULL,
-    id_status INT NOT NULL,
-    observacao TEXT,
-    data_alteracao DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_solicitacao) REFERENCES solicitacoes(id_solicitacao),
+    id_solicitacao INT NOT NULL,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
-    FOREIGN KEY (id_status) REFERENCES status_solicitacao(id_status)
+    FOREIGN KEY (id_solicitacao) REFERENCES solicitacoes(id_solicitacao)
+);
+
+CREATE TABLE historico_status (
+    id_historico INT AUTO_INCREMENT PRIMARY KEY,
+    data_alteracao DATETIME DEFAULT CURRENT_TIMESTAMP,
+    observacao TEXT NULL,
+    id_solicitacao INT NOT NULL,
+    id_status INT NOT NULL,
+    id_usuario INT NOT NULL,
+    FOREIGN KEY (id_solicitacao) REFERENCES solicitacoes(id_solicitacao),
+    FOREIGN KEY (id_status) REFERENCES status_solicitacao(id_status),
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
 CREATE TABLE anexos (
     id_anexo INT AUTO_INCREMENT PRIMARY KEY,
-    id_solicitacao INT NOT NULL,
     nome_arquivo VARCHAR(255) NOT NULL,
-    caminho_arquivo VARCHAR(255) NOT NULL,
-    tipo_arquivo VARCHAR(100),
-    tamanho_arquivo INT,
-    data_upload DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_solicitacao) REFERENCES solicitacoes(id_solicitacao)
+    caminho_arquivo VARCHAR(500) NOT NULL,
+    data_envio DATETIME DEFAULT CURRENT_TIMESTAMP,
+    id_solicitacao INT NOT NULL,
+    id_usuario INT NOT NULL,
+    FOREIGN KEY (id_solicitacao) REFERENCES solicitacoes(id_solicitacao),
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
