@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Central de Demandas — IFPI Campus Paulistana</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
   <header id="global-header" class="topbar hidden">
     <div class="header-logo">
-      <img src="LOGO IFPI.png" alt="Logo do IFPI" class="header-logo-img">
+      <img src="/static/LOGO IFPI.png">
       <span>IFPI Central de Demandas da Coordenação</span>
     </div>
     <div class="nav-links">
@@ -153,27 +153,37 @@
             <p>Preencha o formulário para registrar sua demanda.</p>
           </div>
 
-          <form onsubmit="enviarFormulario(event)">
+          <form action="/salvar-solicitacao" method="POST">
+            <!-- Campos ocultos sincronizados com os botões do formulário -->
+            <input type="hidden" name="id_categoria" id="input-id-categoria" value="1">
+            <input type="hidden" name="prioridade" id="input-prioridade" value="Baixa">
+            <input type="hidden" name="coletiva" id="input-coletiva" value="0">
+
             <div class="form-row">
               <div class="form-group">
                 <label>Nome Completo</label>
-                <input type="text" placeholder="Ex: João Pedro Carvalho" required>
+                <input type="text" name="nome" placeholder="Ex: João Pedro Carvalho" required>
               </div>
               <div class="form-group">
                 <label>Matrícula</label>
-                <input type="text" placeholder="Ex: 20231ADS0001" required>
+                <input type="text" name="matricula" placeholder="Ex: 20231ADS0001" required>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
                 <label>Curso</label>
-                <input type="text" placeholder="Ex: Análise e Desenvolvimento de Sistemas" required>
+                <input type="text" name="curso" placeholder="Ex: Análise e Desenvolvimento de Sistemas" required>
               </div>
               <div class="form-group">
                 <label>Turma</label>
-                <input type="text" placeholder="Ex: 2023.1" required>
+                <input type="text" name="turma" placeholder="Ex: 2023.1" required>
               </div>
+            </div>
+
+            <div class="form-group">
+              <label>Título da Solicitação</label>
+              <input type="text" name="titulo" placeholder="Ex: Problema de acesso ao SIGAA" required>
             </div>
 
             <div class="form-group">
@@ -211,8 +221,8 @@
               <div class="priority-row">
                 <span>Afeta outras pessoas além de você?</span>
                 <div class="toggle-group" data-qid="q3">
-                  <button type="button" onclick="mudarToggle(this, 'Sim')">Sim</button>
-                  <button type="button" class="active" onclick="mudarToggle(this, 'Nao')">Não</button>
+                  <button type="button" onclick="mudarToggle(this, 'Sim'); document.getElementById('input-coletiva').value = '1'">Sim</button>
+                  <button type="button" class="active" onclick="mudarToggle(this, 'Nao'); document.getElementById('input-coletiva').value = '0'">Não</button>
                 </div>
               </div>
 
@@ -224,7 +234,7 @@
 
             <div class="form-group">
               <label>Descrição Detalhada</label>
-              <textarea rows="4" placeholder="Descreva seu problema com o máximo de detalhes possível..." required></textarea>
+              <textarea name="descricao" rows="4" placeholder="Descreva seu problema com o máximo de detalhes possível..." required></textarea>
             </div>
 
             <div class="form-group">
@@ -235,7 +245,7 @@
               </div>
             </div>
 
-            <button type="submit" class="btn-submit">Enviar Solicitação</button>
+            <button type="submit" class="btn-submit" onclick="document.getElementById('input-prioridade').value = document.getElementById('label-prioridade').innerText">Enviar Solicitação</button>
           </form>
         </div>
       </div>
@@ -250,8 +260,8 @@
           <div class="form-row" style="align-items: flex-end;">
             <div class="form-group" style="flex: 1; margin-bottom: 0;">
               <label>Código de Protocolo</label>
-              <input type="text" id="input-protocolo" value="#2026-015" placeholder="Ex: #2026-015">
-              <span style="font-size: 0.75rem; color: #6b7280; margin-top: 4px; display: block;">Tente: #2026-015 para ver o exemplo</span>
+              <input type="text" id="input-protocolo" placeholder="Ex: PROT-20261119-1234">
+              <span style="font-size: 0.75rem; color: #6b7280; margin-top: 4px; display: block;">Digite o protocolo gerado ao enviar a solicitação</span>
             </div>
             <button type="button" class="btn-submit" style="width: 110px; margin-top: 0;" onclick="buscarProtocolo()">Buscar</button>
           </div>
@@ -259,24 +269,26 @@
           <div id="resultado-protocolo" class="hidden" style="margin-top: 2rem;">
             <div class="protocol-card-top">
               <div>
-                <strong>#2026-015</strong> <span class="badge-alta">Alta</span>
-                <p style="font-size: 0.85rem; color: #4b5563; margin-top: 2px;">João Pedro Carvalho · Análise e Desenvolvimento de Sistemas</p>
+                <strong id="res-protocolo">#PROT</strong> <span id="res-prioridade" class="badge-alta">Alta</span>
+                <p id="res-titulo" style="font-size: 0.95rem; font-weight: 600; color: #111827; margin-top: 4px;">Título</p>
+                <p id="res-descricao" style="font-size: 0.85rem; color: #4b5563; margin-top: 2px;">Descrição</p>
+                <p id="res-usuario" style="font-size: 0.78rem; color: #6b7280; margin-top: 4px;">Solicitante</p>
               </div>
-              <span class="badge-andamento">Em Andamento</span>
+              <span id="res-status" class="badge-andamento">Aberta</span>
             </div>
 
             <div class="timeline-box">
               <div class="timeline-item completed">
                 <div class="t-icon">✓</div>
-                <div><strong>Recebido</strong><br><span style="font-size: 0.75rem; color: #6b7280;">20/09/2026 06:32</span></div>
+                <div><strong>Recebido</strong><br><span id="res-data" style="font-size: 0.75rem; color: #6b7280;">19/11/2026 21:43</span></div>
               </div>
-              <div class="timeline-item completed">
-                <div class="t-icon">✓</div>
-                <div><strong>Em Análise</strong><br><span style="font-size: 0.75rem; color: #6b7280;">20/09/2026 08:05</span></div>
+              <div class="timeline-item">
+                <div class="t-icon">2</div>
+                <div><strong>Em Análise</strong><br><span style="font-size: 0.75rem; color: #6b7280;">Aguardando</span></div>
               </div>
-              <div class="timeline-item active">
-                <div class="t-icon">●</div>
-                <div><strong>Em Andamento</strong><br><span style="font-size: 0.75rem; color: #6b7280;">20/09/2026 09:40</span></div>
+              <div class="timeline-item">
+                <div class="t-icon">3</div>
+                <div><strong>Em Andamento</strong><br><span style="font-size: 0.75rem; color: #6b7280;">Aguardando</span></div>
               </div>
             </div>
 
@@ -635,16 +647,38 @@
       abrirAbaAluno('acompanhar');
     }
 
-    function buscarProtocolo() {
-      const val = document.getElementById('input-protocolo').value.trim();
-      const resBox = document.getElementById('resultado-protocolo');
-      if (val === '#2026-015') {
-        resBox.classList.remove('hidden');
-      } else {
-        alert('Protocolo não encontrado. Tente: #2026-015');
-        resBox.classList.add('hidden');
-      }
+    async function buscarProtocolo() {
+  const protocolo = document.getElementById('input-protocolo').value.trim();
+  const boxResultado = document.getElementById('resultado-protocolo');
+
+  if (!protocolo) {
+    alert('Por favor, digite o código do protocolo.');
+    return;
+  }
+
+  try {
+    const resposta = await fetch(`/buscar-protocolo?protocolo=${encodeURIComponent(protocolo)}`);
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      alert(dados.erro || 'Protocolo não encontrado.');
+      boxResultado.classList.add('hidden');
+      return;
     }
+
+    document.getElementById('res-protocolo').innerText = dados.protocolo;
+    document.getElementById('res-prioridade').innerText = dados.prioridade;
+    document.getElementById('res-titulo').innerText = dados.titulo;
+    document.getElementById('res-descricao').innerText = dados.descricao;
+    document.getElementById('res-usuario').innerText = `Solicitante: ${dados.nome_usuario}`;
+    document.getElementById('res-status').innerText = dados.nome_status;
+    document.getElementById('res-data').innerText = dados.data_criacao;
+
+    boxResultado.classList.remove('hidden');
+  } catch (erro) {
+    alert('Erro ao conectar com o servidor.');
+  }
+}
 
     function enviarMensagemChat() {
       const txtInput = document.getElementById('chat-txt');
@@ -707,3 +741,4 @@
   </script>
 </body>
 </html>
+
