@@ -56,11 +56,12 @@
       </div>
 
       <div class="login-form-wrapper">
-        <div class="login-card">
-          <h2>Central de Demandas</h2>
-          <p class="subtitle">Entre com seus dados para continuar</p>
+          <div class="login-card">
+          <h2 id="titulo-auth">Central de Demandas</h2>
+          <p id="subtitulo-auth" class="subtitle">Entre com seus dados para continuar</p>
 
-          <form onsubmit="fazerLogin(event)">
+          <!-- Formulário de Login -->
+          <form id="form-login" onsubmit="fazerLogin(event)">
             <div id="login-erro" class="hidden" style="background: #fee2e2; color: #b91c1c; padding: 0.6rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 1rem; text-align: center; font-weight: 500;">
               Matrícula ou senha incorretas! Acesso restrito.
             </div>
@@ -79,15 +80,65 @@
                 <span class="icon">🔒</span>
                 <input type="password" id="senha" placeholder="Digite sua senha">
               </div>
-              <a href="#" class="forgot-link">Esqueci minha senha</a>
             </div>
 
             <button type="submit" class="btn-submit">Entrar</button>
 
-            <div style="font-size: 0.725rem; color: #9ca3af; text-align: center; margin-top: 1.5rem;">
-              Acesso destinado aos usuários autorizados do IFPI
+            <div style="text-align: center; margin-top: 1.2rem; font-size: 0.85rem;">
+              Primeiro acesso? <a href="#" onclick="alternarTelaAuth('cadastro'); return false;" style="color: #15803d; font-weight: 600;">Criar minha senha</a>
             </div>
           </form>
+
+          <!-- Formulário de Cadastro de Novo Usuário -->
+          <form id="form-cadastro" class="hidden" onsubmit="fazerCadastroUsuario(event)">
+            <div id="cadastro-msg" class="hidden" style="padding: 0.6rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 1rem; text-align: center; font-weight: 500;"></div>
+
+            <div class="form-group">
+              <label for="cad-nome">Nome Completo</label>
+              <div class="input-icon-wrapper">
+                <span class="icon">📝</span>
+                <input type="text" id="cad-nome" placeholder="Digite seu nome completo">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="cad-matricula">Matrícula</label>
+              <div class="input-icon-wrapper">
+                <span class="icon">👤</span>
+                <input type="text" id="cad-matricula" placeholder="Ex: 2025120IIPI0047">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="cad-senha">Crie sua Senha</label>
+              <div class="input-icon-wrapper">
+                <span class="icon">🔒</span>
+                <input type="password" id="cad-senha" placeholder="Escolha uma senha pessoal">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="cad-tipo">Tipo de Acesso</label>
+              <select id="cad-tipo" style="width: 100%; padding: 0.65rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9rem;">
+                <option value="aluno">Estudante (Aluno)</option>
+                <option value="coordenador">Coordenação / Servidor</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn-submit">Cadastrar e Salvar Senha</button>
+
+            <div style="text-align: center; margin-top: 1.2rem; font-size: 0.85rem;">
+              Já tem cadastro? <a href="#" onclick="alternarTelaAuth('login'); return false;" style="color: #15803d; font-weight: 600;">Voltar para o Login</a>
+            </div>
+          </form>
+        </div>
+
+
+          <form onsubmit="fazerLogin(event)">
+            <div id="login-erro" class="hidden" style="background: #fee2e2; color: #b91c1c; padding: 0.6rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 1rem; text-align: center; font-weight: 500;">
+              Matrícula ou senha incorretas! Acesso restrito.
+            </div>
+
+           </div>
         </div>
       </div>
     </div>
@@ -153,9 +204,10 @@
             <p>Preencha o formulário para registrar sua demanda.</p>
           </div>
 
-          <form action="/salvar-solicitacao" method="POST">
+          <form id="form-nova-solicitacao" onsubmit="enviarSolicitacaoBonita(event)">
             <!-- Campos ocultos sincronizados com os botões do formulário -->
             <input type="hidden" name="id_categoria" id="input-id-categoria" value="1">
+            <input type="hidden" name="nome_categoria" id="input-nome-categoria" value="Matrícula">
             <input type="hidden" name="prioridade" id="input-prioridade" value="Baixa">
             <input type="hidden" name="coletiva" id="input-coletiva" value="0">
 
@@ -219,8 +271,8 @@
               </div>
 
               <div class="priority-row">
-                <span>Afeta outras pessoas além de você?</span>
-                <div class="toggle-group" data-qid="q3">
+                <span><strong>Solicitação Coletiva da Turma?</strong> (Afeta outros alunos / turma inteira)</span>
+                  <div class="toggle-group" data-qid="q3">
                   <button type="button" onclick="mudarToggle(this, 'Sim'); document.getElementById('input-coletiva').value = '1'">Sim</button>
                   <button type="button" class="active" onclick="mudarToggle(this, 'Nao'); document.getElementById('input-coletiva').value = '0'">Não</button>
                 </div>
@@ -267,6 +319,7 @@
           </div>
 
           <div id="resultado-protocolo" class="hidden" style="margin-top: 2rem;">
+            <input type="hidden" id="res-id-solicitacao">
             <div class="protocol-card-top">
               <div>
                 <strong id="res-protocolo">#PROT</strong> <span id="res-prioridade" class="badge-alta">Alta</span>
@@ -277,10 +330,15 @@
               <span id="res-status" class="badge-andamento">Aberta</span>
             </div>
 
+            <div style="display: flex; gap: 0.5rem; margin: 1rem 0;">
+              <button type="button" onclick="editarSolicitacao()" style="background: #2563eb; color: white; border: none; padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem;">✏️ Editar Descrição</button>
+              <button type="button" onclick="excluirSolicitacao()" style="background: #dc2626; color: white; border: none; padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem;">🗑️ Excluir Solicitação</button>
+            </div>
+
             <div class="timeline-box">
               <div class="timeline-item completed">
                 <div class="t-icon">✓</div>
-                <div><strong>Recebido</strong><br><span id="res-data" style="font-size: 0.75rem; color: #6b7280;">19/11/2026 21:43</span></div>
+                <div><strong>Recebido</strong><br><span id="res-data" style="font-size: 0.75rem; color: #6b7280;">--/--/----</span></div>
               </div>
               <div class="timeline-item">
                 <div class="t-icon">2</div>
@@ -538,11 +596,32 @@
 
     <footer>Instituto Federal do Piauí — Central de Demandas da Coordenação</footer>
   </div>
+<!-- Modal Personalizado de Sucesso -->
+<div id="modal-sucesso" class="hidden" style="position: fixed; inset: 0; background: rgba(17, 24, 39, 0.65); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+  <div style="background: #ffffff; border-radius: 16px; padding: 2rem; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); animation: fadeIn 0.25s ease;">
+    <div style="width: 64px; height: 64px; background: #dcfce7; color: #16a34a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1rem auto;">
+      ✓
+    </div>
+    <h3 style="color: #111827; font-size: 1.25rem; margin-bottom: 0.4rem;">Solicitação Registrada!</h3>
+    <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 1.25rem;">Sua demanda foi enviada para a coordenação do IFPI e já está salva no sistema.</p>
+    
+    <div style="background: #f3f4f6; border: 1px dashed #9ca3af; border-radius: 10px; padding: 0.85rem; margin-bottom: 1.5rem;">
+      <span style="display: block; font-size: 0.72rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Protocolo Gerado</span>
+      <strong id="modal-protocolo-texto" style="font-size: 1.2rem; color: #065f46; letter-spacing: 0.03em;">PROT-00000000-0000</strong>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem;">
+      <button type="button" onclick="fecharModalSucesso(false)" style="flex: 1; padding: 0.7rem; border: 1px solid #d1d5db; background: #ffffff; color: #374151; border-radius: 8px; font-weight: 600; cursor: pointer;">Fechar</button>
+      <button type="button" onclick="fecharModalSucesso(true)" style="flex: 1.4; padding: 0.7rem; border: none; background: #15803d; color: #ffffff; border-radius: 8px; font-weight: 600; cursor: pointer;">Acompanhar Agora &gt;</button>
+    </div>
+  </div>
+</div>
+
 
   <script>
     const respostasPrioridade = { q1: 'Nao', q2: 'Nao', q3: 'Nao' };
 
-    function fazerLogin(event) {
+    async function fazerLogin(event) {
       event.preventDefault();
       const mat = document.getElementById('matricula').value.trim();
       const sen = document.getElementById('senha').value.trim();
@@ -554,9 +633,35 @@
         return;
       }
 
-      errBox.classList.add('hidden');
-      document.getElementById('global-header').classList.remove('hidden');
-      navegarPara('dashboard-page');
+      try {
+        const resp = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matricula: mat, senha: sen })
+        });
+        const dados = await resp.json();
+
+        if (!resp.ok) {
+          errBox.innerText = dados.erro || 'Matrícula ou senha incorretas!';
+          errBox.classList.remove('hidden');
+          return;
+        }
+
+        errBox.classList.add('hidden');
+        document.getElementById('global-header').classList.remove('hidden');
+                const btnCoord = document.getElementById('nav-coord');
+        if (dados.tipo_usuario === 'coordenador') {
+          btnCoord.style.display = 'inline-block';
+          navegarPara('coordenacao-page');
+        } else {
+          btnCoord.style.display = 'none';
+          navegarPara('dashboard-page');
+        }
+
+      } catch (erro) {
+        errBox.innerText = 'Erro ao conectar com o servidor.';
+        errBox.classList.remove('hidden');
+      }
     }
 
     function fazerLogout() {
@@ -579,18 +684,99 @@
         document.getElementById('nav-home').classList.add('active');
       } else if (pageId === 'aluno-page') {
         document.getElementById('nav-aluno').classList.add('active');
-      } else if (pageId === 'coordenacao-page') {
+            } else if (pageId === 'coordenacao-page') {
         document.getElementById('nav-coord').classList.add('active');
+        carregarFilaCoordenacao();
       }
     }
+
+        async function carregarFilaCoordenacao() {
+      try {
+        const resp = await fetch('/listar-solicitacoes');
+        const lista = await resp.json();
+        const tbody = document.getElementById('tbody-fila');
+        tbody.innerHTML = '';
+
+        // Contadores reais calculados direto do banco
+        let totalAbertas = 0;
+        let totalAlta = 0;
+        let totalMedia = 0;
+        let totalBaixa = 0;
+        let totalAndamento = 0;
+        let totalResolvidas = 0;
+
+        lista.forEach(item => {
+          // Soma nas estatísticas reais
+          if (item.nome_status === 'Resolvida' || item.nome_status === 'Encerrada') {
+            totalResolvidas++;
+          } else {
+            totalAbertas++;
+            if (item.nome_status === 'Em Andamento') totalAndamento++;
+          }
+
+          if (item.prioridade === 'Alta') totalAlta++;
+          else if (item.prioridade === 'Média') totalMedia++;
+          else totalBaixa++;
+
+          // Monta a linha na tabela Fila Inteligente
+          const classePrio = item.prioridade === 'Alta' ? 'alta' : (item.prioridade === 'Média' ? 'media' : 'baixa');
+          const seloColetiva = item.coletiva ? `<br><span class="badge-coletiva">👥 Coletiva (${item.turma || 'Turma'})</span>` : '';
+          tbody.innerHTML += `
+            <tr data-prioridade="${item.prioridade}">
+              <td><strong>${item.protocolo}</strong></td>
+              <td><strong>${item.nome_usuario}</strong><br><small>${item.titulo}</small>${seloColetiva}</td>
+              <td>${item.nome_categoria}</td>
+              <td><span class="badge-prio ${classePrio}">• ${item.prioridade}</span></td>
+              <td><span class="badge-st recebido">${item.nome_status}</span></td>
+              <td>
+                <button class="btn-tb-abrir" onclick="abrirSolicitacaoPainel('${item.protocolo}')">Abrir</button>
+              </td>
+            </tr>`;
+        });
+
+        // Atualiza os 6 quadrados de cima (KPIs) no Painel da Coordenação
+        const kpis = document.querySelectorAll('#coordenacao-page .kpi-val');
+        if (kpis.length >= 6) {
+          kpis[0].innerText = totalAbertas;
+          kpis[1].innerText = totalAlta;
+          kpis[2].innerText = totalMedia;
+          kpis[3].innerText = totalBaixa;
+          kpis[4].innerText = totalAndamento;
+          kpis[5].innerText = totalResolvidas;
+        }
+
+        // Atualiza também os 4 quadrados da Página Inicial (Dashboard)
+        const statsInicio = document.querySelectorAll('#dashboard-page .stat-item .number');
+        if (statsInicio.length >= 4) {
+          statsInicio[0].innerText = totalAbertas;
+          statsInicio[1].innerText = totalAlta;
+          statsInicio[2].innerText = totalAndamento;
+          statsInicio[3].innerText = totalResolvidas;
+        }
+
+        // Atualiza o texto do banner vermelho de alerta
+        const bannerTitulo = document.querySelector('#coordenacao-page .alert-content strong');
+        const bannerSub = document.querySelector('#coordenacao-page .alert-content p');
+        if (bannerTitulo) bannerTitulo.innerText = `Demandas registradas — ${totalAbertas} solicitações aguardando resposta`;
+        if (bannerSub) bannerSub.innerText = `${totalAlta} com alta prioridade · ${totalMedia} com média prioridade · ${totalBaixa} com baixa prioridade`;
+
+      } catch (erro) {
+        console.error('Erro ao carregar fila:', erro);
+      }
+    }
+
+
+    function abrirSolicitacaoPainel(protocolo) {
+      abrirAbaAluno('acompanhar');
+      document.getElementById('input-protocolo').value = protocolo;
+      buscarProtocolo();
+    }
+ 
+    
 
     function abrirAbaAluno(tipo) {
       navegarPara('aluno-page');
       mudarSubAba(tipo);
-      if (tipo === 'acompanhar') {
-        document.getElementById('input-protocolo').value = '#2026-015';
-        buscarProtocolo();
-      }
     }
 
     function mudarSubAba(tipo) {
@@ -611,7 +797,9 @@
     function ativarChip(btn) {
       btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
+      document.getElementById('input-nome-categoria').value = btn.innerText.trim();
     }
+
 
     function mudarToggle(btn, valor) {
       const group = btn.parentElement;
@@ -641,62 +829,132 @@
       }
     }
 
-    function enviarFormulario(e) {
-      e.preventDefault();
-      alert('Solicitação enviada com sucesso! Protocolo gerado: #2026-015');
-      abrirAbaAluno('acompanhar');
-    }
-
     async function buscarProtocolo() {
-  const protocolo = document.getElementById('input-protocolo').value.trim();
-  const boxResultado = document.getElementById('resultado-protocolo');
+      const protocolo = document.getElementById('input-protocolo').value.trim();
+      const boxResultado = document.getElementById('resultado-protocolo');
 
-  if (!protocolo) {
-    alert('Por favor, digite o código do protocolo.');
-    return;
-  }
+      if (!protocolo) {
+        alert('Por favor, digite o código do protocolo.');
+        return;
+      }
 
-  try {
-    const resposta = await fetch(`/buscar-protocolo?protocolo=${encodeURIComponent(protocolo)}`);
-    const dados = await resposta.json();
+      try {
+        const resposta = await fetch(`/buscar-protocolo?protocolo=${encodeURIComponent(protocolo)}`);
+        const dados = await resposta.json();
 
-    if (!resposta.ok) {
-      alert(dados.erro || 'Protocolo não encontrado.');
-      boxResultado.classList.add('hidden');
-      return;
+        if (!resposta.ok) {
+          alert(dados.erro || 'Protocolo não encontrado.');
+          boxResultado.classList.add('hidden');
+          return;
+        }
+
+        document.getElementById('res-id-solicitacao').value = dados.id_solicitacao;
+        document.getElementById('res-protocolo').innerText = dados.protocolo;
+        document.getElementById('res-prioridade').innerText = dados.prioridade;
+        if (dados.coletiva) {
+          document.getElementById('res-prioridade').innerText += ' · 👥 Solicitação Coletiva da Turma';
+        }
+        document.getElementById('res-titulo').innerText = dados.titulo;
+        document.getElementById('res-descricao').innerText = dados.descricao;
+        const infoCurso = dados.turma ? `${dados.nome_curso} (${dados.turma})` : dados.nome_curso;
+        document.getElementById('res-usuario').innerText = `Solicitante: ${dados.nome_usuario} · Curso: ${infoCurso}`;
+
+
+        document.getElementById('res-status').innerText = dados.nome_status;
+        document.getElementById('res-data').innerText = dados.data_criacao;
+
+        // Carrega as mensagens do banco (Tabela 2: mensagens) com Editar e Excluir
+        const chatDiv = document.getElementById('chat-messages');
+        chatDiv.innerHTML = '';
+        (dados.mensagens || []).forEach(msg => {
+          chatDiv.innerHTML += `
+            <div class="chat-bubble aluno">
+              <strong>${msg.nome}</strong>
+              <p>${msg.conteudo}</p>
+              <span class="time">${msg.hora}</span>
+              <div style="margin-top: 4px; font-size: 0.72rem;">
+                <a href="#" onclick="editarMensagem(${msg.id_mensagem}, '${msg.conteudo.replace(/'/g, "\\'")}'); return false;">Editar</a> |
+                <a href="#" style="color: #dc2626;" onclick="excluirMensagem(${msg.id_mensagem}); return false;">Excluir</a>
+              </div>
+            </div>`;
+        });
+
+        boxResultado.classList.remove('hidden');
+      } catch (erro) {
+        alert('Erro ao conectar com o servidor.');
+      }
     }
 
-    document.getElementById('res-protocolo').innerText = dados.protocolo;
-    document.getElementById('res-prioridade').innerText = dados.prioridade;
-    document.getElementById('res-titulo').innerText = dados.titulo;
-    document.getElementById('res-descricao').innerText = dados.descricao;
-    document.getElementById('res-usuario').innerText = `Solicitante: ${dados.nome_usuario}`;
-    document.getElementById('res-status').innerText = dados.nome_status;
-    document.getElementById('res-data').innerText = dados.data_criacao;
+    async function editarSolicitacao() {
+      const protocolo = document.getElementById('res-protocolo').innerText;
+      const atual = document.getElementById('res-descricao').innerText;
+      const nova = prompt('Digite a nova descrição da solicitação:', atual);
+      if (!nova || nova.trim() === '') return;
 
-    boxResultado.classList.remove('hidden');
-  } catch (erro) {
-    alert('Erro ao conectar com o servidor.');
-  }
-}
+      const resp = await fetch('/editar-solicitacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ protocolo, descricao: nova })
+      });
+      const dados = await resp.json();
+      alert(dados.mensagem || dados.erro);
+      if (resp.ok) buscarProtocolo();
+    }
 
-    function enviarMensagemChat() {
+    async function excluirSolicitacao() {
+      const protocolo = document.getElementById('res-protocolo').innerText;
+      if (!confirm(`Tem certeza que deseja excluir a solicitação ${protocolo}?`)) return;
+
+      const resp = await fetch('/excluir-solicitacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ protocolo })
+      });
+      const dados = await resp.json();
+      alert(dados.mensagem || dados.erro);
+      if (resp.ok) {
+        document.getElementById('resultado-protocolo').classList.add('hidden');
+        document.getElementById('input-protocolo').value = '';
+      }
+    }
+
+    async function enviarMensagemChat() {
+      const id_solicitacao = document.getElementById('res-id-solicitacao').value;
       const txtInput = document.getElementById('chat-txt');
-      const txt = txtInput.value.trim();
-      if (!txt) return;
+      const conteudo = txtInput.value.trim();
+      if (!conteudo) return;
 
-      const chatMsgs = document.getElementById('chat-messages');
-      const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const resp = await fetch('/mensagens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_solicitacao, conteudo })
+      });
+      if (resp.ok) {
+        txtInput.value = '';
+        buscarProtocolo();
+      }
+    }
 
-      chatMsgs.innerHTML += `
-        <div class="chat-bubble aluno">
-          <strong>Você</strong>
-          <p>${txt}</p>
-          <span class="time">${timeNow}</span>
-        </div>
-      `;
-      txtInput.value = '';
-      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    async function editarMensagem(id_mensagem, textoAtual) {
+      const novoTexto = prompt('Editar mensagem:', textoAtual);
+      if (!novoTexto || novoTexto.trim() === '') return;
+
+      const resp = await fetch('/mensagens/editar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_mensagem, conteudo: novoTexto })
+      });
+      if (resp.ok) buscarProtocolo();
+    }
+
+    async function excluirMensagem(id_mensagem) {
+      if (!confirm('Excluir esta mensagem?')) return;
+      const resp = await fetch('/mensagens/excluir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_mensagem })
+      });
+      if (resp.ok) buscarProtocolo();
     }
 
     function responderResolucao(resp) {
@@ -715,7 +973,7 @@
       const trs = document.querySelectorAll('#tbody-fila tr');
       trs.forEach(tr => {
         if (prio === 'Todas' || tr.getAttribute('data-prioridade') === prio) {
-          tr.style.display = '';
+              tr.style.display = '';
         } else {
           tr.style.display = 'none';
         }
@@ -738,6 +996,111 @@
     function toggleNotificacoes() {
       document.getElementById('popover-notificacoes').classList.toggle('hidden');
     }
+        // Carrega automaticamente as solicitações reais do MySQL assim que a página abre
+    window.addEventListener('DOMContentLoaded', () => {
+      carregarFilaCoordenacao();
+    });
+   
+          let ultimoProtocoloGerado = '';
+
+    async function enviarSolicitacaoBonita(event) {
+      event.preventDefault();
+      document.getElementById('input-prioridade').value = document.getElementById('label-prioridade').innerText;
+
+      const form = document.getElementById('form-nova-solicitacao');
+      const formData = new FormData(form);
+
+      try {
+        const resp = await fetch('/salvar-solicitacao', {
+          method: 'POST',
+          body: formData
+        });
+        const texto = await resp.text();
+
+        if (!resp.ok) {
+          alert(texto);
+          return;
+        }
+
+        const match = texto.match(/PROT-\d+-\d+/);
+        ultimoProtocoloGerado = match ? match : 'Registrado';
+
+        document.getElementById('modal-protocolo-texto').innerText = ultimoProtocoloGerado;
+        const modal = document.getElementById('modal-sucesso');
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+
+        form.reset();
+      } catch (erro) {
+        alert('Erro ao enviar solicitação.');
+      }
+    }
+
+    function fecharModalSucesso(irParaAcompanhar) {
+      const modal = document.getElementById('modal-sucesso');
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+
+      if (irParaAcompanhar && ultimoProtocoloGerado) {
+        abrirAbaAluno('acompanhar');
+        document.getElementById('input-protocolo').value = ultimoProtocoloGerado;
+        buscarProtocolo();
+      }
+    }
+    function alternarTelaAuth(modo) {
+      const formLogin = document.getElementById('form-login');
+      const formCad = document.getElementById('form-cadastro');
+      const titulo = document.getElementById('titulo-auth');
+      const sub = document.getElementById('subtitulo-auth');
+
+      if (modo === 'cadastro') {
+        formLogin.classList.add('hidden');
+        formCad.classList.remove('hidden');
+        titulo.innerText = 'Criar Conta';
+        sub.innerText = 'Cadastre sua matrícula e senha pessoal';
+      } else {
+        formCad.classList.add('hidden');
+        formLogin.classList.remove('hidden');
+        titulo.innerText = 'Central de Demandas';
+        sub.innerText = 'Entre com seus dados para continuar';
+      }
+    }
+
+    async function fazerCadastroUsuario(event) {
+      event.preventDefault();
+      const nome = document.getElementById('cad-nome').value.trim();
+      const matricula = document.getElementById('cad-matricula').value.trim();
+      const senha = document.getElementById('cad-senha').value.trim();
+      const tipo_usuario = document.getElementById('cad-tipo').value;
+      const msgBox = document.getElementById('cadastro-msg');
+
+      const resp = await fetch('/cadastrar-usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, matricula, senha, tipo_usuario })
+      });
+      const dados = await resp.json();
+
+      msgBox.classList.remove('hidden');
+      if (!resp.ok) {
+        msgBox.style.background = '#fee2e2';
+        msgBox.style.color = '#b91c1c';
+        msgBox.innerText = dados.erro;
+        return;
+      }
+
+      msgBox.style.background = '#dcfce7';
+      msgBox.style.color = '#166534';
+      msgBox.innerText = dados.mensagem;
+      document.getElementById('form-cadastro').reset();
+
+      setTimeout(() => {
+        alternarTelaAuth('login');
+        document.getElementById('matricula').value = matricula;
+        msgBox.classList.add('hidden');
+      }, 1500);
+    }
+
   </script>
 </body>
 </html>
