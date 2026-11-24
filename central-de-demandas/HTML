@@ -621,13 +621,13 @@
   <script>
     const respostasPrioridade = { q1: 'Nao', q2: 'Nao', q3: 'Nao' };
 
-    async function fazerLogin(event) {
+     async function fazerLogin(event) {
       event.preventDefault();
       const mat = document.getElementById('matricula').value.trim();
       const sen = document.getElementById('senha').value.trim();
       const errBox = document.getElementById('login-erro');
 
-      if (mat === '' || sen === '') {
+      if (!mat || !sen) {
         errBox.innerText = 'Preencha a matrícula e a senha para entrar!';
         errBox.classList.remove('hidden');
         return;
@@ -648,21 +648,43 @@
         }
 
         errBox.classList.add('hidden');
-        document.getElementById('global-header').classList.remove('hidden');
-                const btnCoord = document.getElementById('nav-coord');
+        const header = document.getElementById('global-header');
+        if (header) header.classList.remove('hidden');
+
+        const btnAluno = document.getElementById('nav-aluno');
+        const btnCoord = document.getElementById('nav-coord');
+        const cardsInicio = document.querySelectorAll('#dashboard-page .action-card');
+        const tabNova = document.getElementById('tab-btn-nova');
+
         if (dados.tipo_usuario === 'coordenador') {
-          btnCoord.style.display = 'inline-block';
+          if (btnCoord) btnCoord.style.display = 'inline-block';
+          if (btnAluno) btnAluno.style.display = 'none';
+          if (tabNova) tabNova.style.display = 'none';
+          if (cardsInicio.length >= 3) {
+            cardsInicio[0].style.display = 'none';
+            cardsInicio[1].style.display = 'block';
+            cardsInicio[2].style.display = 'block';
+          }
           navegarPara('coordenacao-page');
         } else {
-          btnCoord.style.display = 'none';
+          if (btnCoord) btnCoord.style.display = 'none';
+          if (btnAluno) btnAluno.style.display = 'inline-block';
+          if (tabNova) tabNova.style.display = 'inline-block';
+          if (cardsInicio.length >= 3) {
+            cardsInicio[0].style.display = 'block';
+            cardsInicio[1].style.display = 'block';
+            cardsInicio[2].style.display = 'none';
+          }
           navegarPara('dashboard-page');
         }
-
       } catch (erro) {
-        errBox.innerText = 'Erro ao conectar com o servidor.';
+        console.error('Erro no login:', erro);
+        errBox.innerText = 'Falha: ' + erro.message;
         errBox.classList.remove('hidden');
       }
     }
+
+
 
     function fazerLogout() {
       document.getElementById('global-header').classList.add('hidden');
@@ -684,7 +706,7 @@
         document.getElementById('nav-home').classList.add('active');
       } else if (pageId === 'aluno-page') {
         document.getElementById('nav-aluno').classList.add('active');
-            } else if (pageId === 'coordenacao-page') {
+      } else if (pageId === 'coordenacao-page') {
         document.getElementById('nav-coord').classList.add('active');
         carregarFilaCoordenacao();
       }
@@ -1065,7 +1087,7 @@
         sub.innerText = 'Entre com seus dados para continuar';
       }
     }
-
+  
     async function fazerCadastroUsuario(event) {
       event.preventDefault();
       const nome = document.getElementById('cad-nome').value.trim();
@@ -1102,6 +1124,6 @@
     }
 
   </script>
-</body>
+ </body>
 </html>
 
