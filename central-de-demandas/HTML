@@ -116,13 +116,8 @@
                 <input type="password" id="cad-senha" placeholder="Escolha uma senha pessoal">
               </div>
             </div>
-            <div class="form-group">
-              <label for="cad-tipo">Tipo de Acesso</label>
-              <select id="cad-tipo" style="width: 100%; padding: 0.65rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9rem;">
-                <option value="aluno">Estudante (Aluno)</option>
-                <option value="coordenador">Coordenação / Servidor</option>
-              </select>
-            </div>
+            <p style="color: #6b7280; font-size: 0.78rem; margin-bottom: 1rem;">ℹ️ O perfil (Estudante ou Coordenação) é identificado automaticamente pelo padrão da sua matrícula SUAP.</p>
+
 
             <button type="submit" class="btn-submit">Cadastrar e Salvar Senha</button>
 
@@ -137,12 +132,11 @@
             <div id="login-erro" class="hidden" style="background: #fee2e2; color: #b91c1c; padding: 0.6rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 1rem; text-align: center; font-weight: 500;">
               Matrícula ou senha incorretas! Acesso restrito.
             </div>
-
-           </div>
+          </form>
         </div>
       </div>
     </div>
-  </div>
+  </body>
 
   <div id="dashboard-page" class="page">
     <main class="main-content">
@@ -210,6 +204,8 @@
             <input type="hidden" name="nome_categoria" id="input-nome-categoria" value="Matrícula">
             <input type="hidden" name="prioridade" id="input-prioridade" value="Baixa">
             <input type="hidden" name="coletiva" id="input-coletiva" value="0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
 
             <div class="form-row">
               <div class="form-group">
@@ -291,11 +287,15 @@
 
             <div class="form-group">
               <label>Anexos (PDF ou Fotos)</label>
-              <div class="upload-dropzone">
-                <p>Arraste arquivos ou <strong>clique para selecionar</strong></p>
-                <span class="upload-sub">PDF, PNG, JPG (Até 10MB)</span>
+               <div onclick="document.getElementById('input-anexo').click()" style="border: 2px dashed #cbd5e1; border-radius: 10px; padding: 1.5rem; text-align: center; cursor: pointer; background: #f8fafc;">
+                <p id="texto-anexo-selecionado" style="color: #475569; font-size: 0.9rem; margin-bottom: 4px;">
+                  Arraste arquivos ou <strong style="color: #15803d; text-decoration: underline;">clique para selecionar</strong>
+                </p>
+                <span style="color: #94a3b8; font-size: 0.78rem;">PDF, PNG, JPG (Até 10MB)</span>
+                <input type="file" id="input-anexo" name="anexo" accept=".pdf,.png,.jpg,.jpeg" class="hidden" onchange="mostrarNomeAnexo(this)">
               </div>
             </div>
+
 
             <button type="submit" class="btn-submit" onclick="document.getElementById('input-prioridade').value = document.getElementById('label-prioridade').innerText">Enviar Solicitação</button>
           </form>
@@ -373,17 +373,13 @@
               </div>
             </div>
 
-            <div class="anexos-box">
-              <span style="font-size: 0.8rem; font-weight: bold; color: #374151; display: block; margin-bottom: 0.5rem;">Anexos</span>
-              <div class="anexo-item">
-                <span>📎 print_sigaa_erro.png</span>
-                <a href="#" onclick="alert('A descarregar print_sigaa_erro.png...')">Baixar</a>
-              </div>
-              <div class="anexo-item">
-                <span>📎 comprovante_matricula.pdf</span>
-                <a href="#" onclick="alert('A descarregar comprovante_matricula.pdf...')">Baixar</a>
+            <div class="anexos-box" style="margin-top: 1.5rem; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem;">
+              <strong style="display: block; margin-bottom: 0.75rem; font-size: 0.9rem; color: #111827;">Anexos</strong>
+              <div id="lista-anexos-protocolo">
+                <span style="font-size: 0.85rem; color: #6b7280;">Nenhum anexo enviado nesta solicitação.</span>
               </div>
             </div>
+
 
             <div class="resolucao-box" id="bloco-resolucao">
               <p><strong>Seu problema foi resolvido?</strong><br>Confirme para encerrar esta solicitação.</p>
@@ -889,17 +885,36 @@
         const chatDiv = document.getElementById('chat-messages');
         chatDiv.innerHTML = '';
         (dados.mensagens || []).forEach(msg => {
-          chatDiv.innerHTML += `
+         chatDiv.innerHTML += `
             <div class="chat-bubble aluno">
               <strong>${msg.nome}</strong>
               <p>${msg.conteudo}</p>
-              <span class="time">${msg.hora}</span>
-              <div style="margin-top: 4px; font-size: 0.72rem;">
-                <a href="#" onclick="editarMensagem(${msg.id_mensagem}, '${msg.conteudo.replace(/'/g, "\\'")}'); return false;">Editar</a> |
-                <a href="#" style="color: #dc2626;" onclick="excluirMensagem(${msg.id_mensagem}); return false;">Excluir</a>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem;">
+                <span style="opacity: 0.85;">${msg.hora}</span>
+                <div style="display: flex; gap: 8px;">
+                  <a href="#" style="color: #fde047; text-decoration: none; font-weight: 600;" onclick="editarMensagem(${msg.id_mensagem}, '${msg.conteudo.replace(/'/g, "\\'")}'); return false;">✏️ Editar</a>
+                  <a href="#" style="color: #fca5a5; text-decoration: none; font-weight: 600;" onclick="excluirMensagem(${msg.id_mensagem}); return false;">🗑️ Excluir</a>
+                </div>
               </div>
             </div>`;
         });
+        
+        const anexosDiv = document.getElementById('lista-anexos-protocolo');
+        if (anexosDiv) {
+          if (dados.anexos && dados.anexos.length > 0) {
+            anexosDiv.innerHTML = '';
+            dados.anexos.forEach(anx => {
+              anexosDiv.innerHTML += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem; border: 1px solid #f3f4f6; border-radius: 8px; margin-bottom: 0.5rem; background: #f9fafb;">
+                  <span style="font-size: 0.85rem; color: #374151;">📎 ${anx.nome_arquivo}</span>
+                  <a href="/${anx.caminho_arquivo}" target="_blank" style="color: #2563eb; font-size: 0.82rem; font-weight: 600; text-decoration: none;">Abrir / Baixar</a>
+                </div>`;
+            });
+          } else {
+            anexosDiv.innerHTML = '<span style="font-size: 0.85rem; color: #6b7280;">Nenhum anexo enviado nesta solicitação.</span>';
+          }
+        }
+
 
         boxResultado.classList.remove('hidden');
       } catch (erro) {
@@ -1093,13 +1108,12 @@
       const nome = document.getElementById('cad-nome').value.trim();
       const matricula = document.getElementById('cad-matricula').value.trim();
       const senha = document.getElementById('cad-senha').value.trim();
-      const tipo_usuario = document.getElementById('cad-tipo').value;
       const msgBox = document.getElementById('cadastro-msg');
 
       const resp = await fetch('/cadastrar-usuario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, matricula, senha, tipo_usuario })
+        body: JSON.stringify({ nome, matricula, senha })
       });
       const dados = await resp.json();
 
@@ -1122,8 +1136,15 @@
         msgBox.classList.add('hidden');
       }, 1500);
     }
+    function mostrarNomeAnexo(input) {
+      const texto = document.getElementById('texto-anexo-selecionado');
+      if (input.files && input.files.length > 0) {
+        texto.innerHTML = `📎 Arquivo selecionado: <strong style="color: #15803d;">${input.files[0].name}</strong>`;
+      } else {
+        texto.innerHTML = `Arraste arquivos ou <strong style="color: #15803d; text-decoration: underline;">clique para selecionar</strong>`;
+      }
+    }
 
   </script>
  </body>
 </html>
-
