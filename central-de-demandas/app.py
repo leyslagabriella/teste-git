@@ -1,3 +1,5 @@
+import os
+from werkzeug.utils import secure_filename
 from flask import Flask, request, render_template, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
@@ -5,6 +7,16 @@ from datetime import datetime
 import random
 
 app = Flask(__name__)
+import secrets
+from flask import session
+
+app.secret_key = 'chave_super_secreta_ifpi_central_demandas'
+
+@app.before_request
+def gerar_codigo_secreto():
+    if 'csrf_token' not in session:
+        session['csrf_token'] = secrets.token_hex(16)
+
 
 # 1. Conexão com o banco central_demandas
 def conectar_banco():
@@ -91,29 +103,43 @@ def login():
     except mysql.connector.Error as erro:
         return jsonify({"erro": f"Erro no banco: {erro}"}), 500
 
+import re
+
 @app.route('/cadastrar-usuario', methods=['POST'])
 def cadastrar_usuario():
     dados = request.get_json() or request.form
     nome = (dados.get('nome') or '').strip()
-    matricula = (dados.get('matricula') or '').strip()
+    matricula = (dados.get('matricula') or '').strip().upper()
     senha = (dados.get('senha') or '').strip()
-    tipo_usuario = (dados.get('tipo_usuario') or 'aluno').strip()
 
     if not nome or not matricula or not senha:
         return jsonify({"erro": "Preencha nome, matrícula e senha."}), 400
+
+    if len(senha) < 6:
+        return jsonify({"erro": "Por segurança, a senha deve ter no mínimo 6 caracteres."}), 400
+
+    # Validação inteligente pelo padrão de matrícula do SUAP (IFPI):
+    # Matrícula SIAPE (Servidor/Coordenação): apenas 7 dígitos numéricos (ex: 2044342)
+    # Matrícula Aluno: contém letras do curso/campus ou 11+ caracteres (ex: 2025120IIPI0047)
+    if re.fullmatch(r'\d{7}', matricula):
+        tipo_usuario = 'coordenador'
+    elif re.fullmatch(r'[A-Z0-9]{11,16}', matricula) and any(c.isalpha() for c in matricula):
+        tipo_usuario = 'aluno'
+    else:
+        return jsonify({
+            "erro": "Matrícula inválida! Use o padrão SUAP: Aluno (ex: 2025120IIPI0047) ou Servidor SIAPE (7 números, ex: 2044342)."
+        }), 400
 
     try:
         conexao = conectar_banco()
         cursor = conexao.cursor(dictionary=True)
 
-        # Verifica se a matrícula já existe
         cursor.execute("SELECT id_usuario FROM usuarios WHERE matricula = %s", (matricula,))
         if cursor.fetchone():
             cursor.close()
             conexao.close()
             return jsonify({"erro": "Esta matrícula já está cadastrada!"}), 409
 
-        # Criptografa a senha individual do usuário (Segurança)
         senha_criptografada = generate_password_hash(senha)
 
         cursor.execute("""
@@ -124,9 +150,12 @@ def cadastrar_usuario():
         conexao.commit()
         cursor.close()
         conexao.close()
-        return jsonify({"mensagem": "Conta criada com sucesso! Agora você já pode entrar."})
+
+        perfil_txt = "Coordenação / Servidor" if tipo_usuario == 'coordenador' else "Estudante (Aluno)"
+        return jsonify({"mensagem": f"Conta criada com sucesso! Perfil identificado: {perfil_txt}."})
     except mysql.connector.Error as erro:
         return jsonify({"erro": f"Erro ao cadastrar: {erro}"}), 500
+
  
     
 
@@ -135,6 +164,10 @@ def cadastrar_usuario():
 # ==========================================
 @app.route('/salvar-solicitacao', methods=['POST'])
 def salvar_solicitacao():
+    token_enviado = request.form.get('csrf_token')
+    if not token_enviado or token_enviado != session.get('csrf_token'):
+     return "Erro de segurança: Código secreto do formulário inválido!", 403
+
     nome = (request.form.get('nome') or '').strip()
     matricula = (request.form.get('matricula') or '').strip()
     curso = (request.form.get('curso') or '').strip()
@@ -207,6 +240,24 @@ def salvar_solicitacao():
         valores = (protocolo, titulo, descricao, data_criacao, prazo, prioridade, coletiva, id_usuario, id_categoria, id_status)
         cursor.execute(sql, valores)
 
+        id_solicitacao_gerado = cursor.lastrowid
+
+        # 5. Verifica se o aluno enviou algum anexo (PDF ou Foto)
+        arquivo = request.files.get('anexo')
+        if arquivo and arquivo.filename != '':
+            nome_seguro = secure_filename(arquivo.filename)
+            pasta_uploads = os.path.join(app.root_path, 'static', 'uploads')
+            os.makedirs(pasta_uploads, exist_ok=True)
+            caminho_completo = os.path.join(pasta_uploads, f"{protocolo}_{nome_seguro}")
+            arquivo.save(caminho_completo)
+
+            caminho_relativo = f"static/uploads/{protocolo}_{nome_seguro}"
+            cursor.execute("""
+                INSERT INTO anexos (nome_arquivo, caminho_arquivo, data_envio, id_solicitacao, id_usuario)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (nome_seguro, caminho_relativo, data_criacao, id_solicitacao_gerado, id_usuario))
+
+
         conexao.commit()
         cursor.close()
         conexao.close()
@@ -255,6 +306,15 @@ def buscar_protocolo():
             ORDER BY m.id_mensagem ASC
         """, (resultado['id_solicitacao'],))
         resultado['mensagens'] = cursor.fetchall()
+
+                # Consulta também os anexos reais vinculados a essa solicitação
+        cursor.execute("""
+            SELECT id_anexo, nome_arquivo, caminho_arquivo
+            FROM anexos
+            WHERE id_solicitacao = %s
+            ORDER BY id_anexo ASC
+        """, (resultado['id_solicitacao'],))
+        resultado['anexos'] = cursor.fetchall()
 
         cursor.close()
         conexao.close()
@@ -362,11 +422,9 @@ def excluir_mensagem():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', csrf_token=session.get('csrf_token'))
+
 
 if __name__ == '__main__':
     inicializar_usuario_padrao()
     app.run(debug=True)
-
-
-
