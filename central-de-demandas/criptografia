@@ -1,116 +1,342 @@
-```python
 import os
+import re
+import json
 import base64
 import secrets
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
 class CriptografiaAES:
     """
-    Criptografia AES-256-GCM para proteger dados confidenciais.
+    Criptografia AES-256-GCM com:
+    - Autenticação e integridade dos dados.
+    - Nonce aleatório por operação.
+    - Versionamento do formato.
+    - Identificação de chaves.
+    - Suporte à rotação de chaves.
+    - Compatibilidade com dados criptografados no formato antigo.
     """
 
+    PREFIXO = "CD1"
     TAMANHO_CHAVE = 32
     TAMANHO_NONCE = 12
+    TAMANHO_TAG = 16
+    TAMANHO_MAXIMO = 10 * 1024 * 1024
 
-    def __init__(self, chave=None):
-        if chave is None:
-            chave = os.getenv("AES_SECRET_KEY")
+    PADRAO_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 
-        if not chave:
-            raise RuntimeError(
-                "Configure AES_SECRET_KEY nas variaveis de ambiente."
+    def __init__(
+        self,
+        chave=None,
+        *,
+        chaves=None,
+        chave_ativa=None
+    ):
+        """
+        Compatibilidade:
+            CriptografiaAES(chave_antiga)
+
+        Configuração com várias chaves:
+            CriptografiaAES(
+                chaves={"v1": chave_antiga, "v2": chave_nova},
+                chave_ativa="v2"
             )
+        """
 
-        try:
-            self.chave = base64.urlsafe_b64decode(chave)
-        except Exception as erro:
-            raise ValueError("Chave AES invalida.") from erro
-
-        if len(self.chave) != self.TAMANHO_CHAVE:
+        if chave is not None and chaves is not None:
             raise ValueError(
-                "A chave AES precisa ter exatamente 32 bytes."
+                "Informe chave ou chaves, não ambos."
             )
 
-        self.cifra = AESGCM(self.chave)
+        if chave is not None:
+            chaves = {"v1": chave}
+
+        elif chaves is None:
+            chaves_json = os.getenv("AES_KEYS_JSON")
+
+            if chaves_json:
+                try:
+                    chaves = json.loads(chaves_json)
+                except json.JSONDecodeError:
+                    raise RuntimeError(
+                        "Configuração de chaves inválida."
+                    ) from None
+
+            else:
+                chave_env = os.getenv("AES_SECRET_KEY")
+
+                if not chave_env:
+                    raise RuntimeError(
+                        "AES_SECRET_KEY não configurada."
+                    )
+
+                chaves = {"v1": chave_env}
+
+        if not isinstance(chaves, dict) or not chaves:
+            raise ValueError("Nenhuma chave válida foi configurada.")
+
+        self.chaves = {}
+
+        for identificador, valor in chaves.items():
+
+            if not isinstance(identificador, str):
+                raise ValueError("Identificador de chave inválido.")
+
+            if not self.PADRAO_ID.fullmatch(identificador):
+                raise ValueError("Identificador de chave inválido.")
+
+            if not isinstance(valor, str):
+                raise ValueError("Formato de chave inválido.")
+
+            try:
+                chave_bytes = self._decodificar_base64(valor)
+            except Exception:
+                raise ValueError(
+                    f"Chave {identificador} inválida."
+                ) from None
+
+            if len(chave_bytes) != self.TAMANHO_CHAVE:
+                raise ValueError(
+                    f"A chave {identificador} deve possuir 32 bytes."
+                )
+
+            self.chaves[identificador] = chave_bytes
+
+        self.chave_ativa = (
+            chave_ativa
+            or os.getenv("AES_ACTIVE_KEY_ID")
+            or next(reversed(self.chaves))
+        )
+
+        if self.chave_ativa not in self.chaves:
+            raise ValueError("Chave ativa não encontrada.")
+
+        self.chave_legada = os.getenv(
+            "AES_LEGACY_KEY_ID",
+            "v1"
+        )
 
     @staticmethod
     def gerar_chave():
+        """
+        Gera uma chave AES-256 codificada em Base64 URL-safe.
+        """
+
         chave = AESGCM.generate_key(bit_length=256)
 
-        return base64.urlsafe_b64encode(chave).decode("utf-8")
+        return base64.urlsafe_b64encode(chave).decode("ascii")
 
-    def criptografar(self, texto):
+    @staticmethod
+    def _decodificar_base64(valor):
+        if not isinstance(valor, str):
+            raise ValueError("Base64 inválido.")
+
+        try:
+            return base64.b64decode(
+                valor.encode("ascii"),
+                altchars=b"-_",
+                validate=True
+            )
+        except Exception:
+            raise ValueError("Base64 inválido.") from None
+
+    @staticmethod
+    def _codificar_base64(valor):
+        return base64.urlsafe_b64encode(valor).decode("ascii")
+
+    def _validar_contexto(self, contexto):
+        if contexto is None:
+            return ""
+
+        if not isinstance(contexto, str):
+            raise ValueError("Contexto inválido.")
+
+        if len(contexto.encode("utf-8")) > 512:
+            raise ValueError("Contexto muito grande.")
+
+        if "\x00" in contexto:
+            raise ValueError("Contexto inválido.")
+
+        return contexto
+
+    def _criar_aad(self, identificador, contexto):
+        """
+        AAD autentica informações que não precisam ser criptografadas,
+        como a versão, a chave e o contexto do registro.
+        """
+
+        return (
+            f"central-demandas|{self.PREFIXO}|"
+            f"{identificador}|{contexto}"
+        ).encode("utf-8")
+
+    def criptografar(self, texto, contexto=None):
+        """
+        Criptografa um texto usando AES-256-GCM.
+
+        Exemplo:
+            criptografar("mensagem", contexto="mensagem:15")
+        """
+
         if not isinstance(texto, str):
-            raise TypeError("O texto precisa ser uma string.")
+            raise TypeError("O conteúdo precisa ser uma string.")
 
+        dados = texto.encode("utf-8")
+
+        if len(dados) > self.TAMANHO_MAXIMO:
+            raise ValueError("Conteúdo muito grande.")
+
+        contexto = self._validar_contexto(contexto)
+
+        identificador = self.chave_ativa
+        chave = self.chaves[identificador]
+
+        # Nonce novo para cada operação.
         nonce = secrets.token_bytes(self.TAMANHO_NONCE)
 
-        dados_cifrados = self.cifra.encrypt(
+        aad = self._criar_aad(
+            identificador,
+            contexto
+        )
+
+        aes = AESGCM(chave)
+
+        criptografado = aes.encrypt(
             nonce,
-            texto.encode("utf-8"),
+            dados,
+            aad
+        )
+
+        pacote = nonce + criptografado
+
+        resultado = self._codificar_base64(pacote)
+
+        return f"{self.PREFIXO}.{identificador}.{resultado}"
+
+    def descriptografar(self, token, contexto=None):
+        """
+        Descriptografa dados novos ou dados do formato legado.
+        """
+
+        if not isinstance(token, str):
+            raise ValueError("Dados criptografados inválidos.")
+
+        if len(token) > self.TAMANHO_MAXIMO * 2:
+            raise ValueError("Dados criptografados muito grandes.")
+
+        try:
+            if token.startswith(f"{self.PREFIXO}."):
+                return self._descriptografar_novo(
+                    token,
+                    contexto
+                )
+
+            return self._descriptografar_legado(token)
+
+        except (
+            InvalidTag,
+            ValueError,
+            UnicodeDecodeError,
+            TypeError
+        ):
+            raise ValueError(
+                "Dados criptografados inválidos ou contexto incorreto."
+            ) from None
+
+    def _descriptografar_novo(self, token, contexto):
+        partes = token.split(".", 2)
+
+        if len(partes) != 3:
+            raise ValueError("Formato inválido.")
+
+        prefixo, identificador, conteudo = partes
+
+        if prefixo != self.PREFIXO:
+            raise ValueError("Versão inválida.")
+
+        if identificador not in self.chaves:
+            raise ValueError("Chave desconhecida.")
+
+        contexto = self._validar_contexto(contexto)
+
+        pacote = self._decodificar_base64(conteudo)
+
+        tamanho_minimo = (
+            self.TAMANHO_NONCE + self.TAMANHO_TAG
+        )
+
+        if len(pacote) < tamanho_minimo:
+            raise ValueError("Conteúdo incompleto.")
+
+        nonce = pacote[:self.TAMANHO_NONCE]
+
+        criptografado = pacote[self.TAMANHO_NONCE:]
+
+        aad = self._criar_aad(
+            identificador,
+            contexto
+        )
+
+        aes = AESGCM(self.chaves[identificador])
+
+        dados = aes.decrypt(
+            nonce,
+            criptografado,
+            aad
+        )
+
+        return dados.decode("utf-8")
+
+    def _descriptografar_legado(self, token):
+        """
+        Compatibilidade com o formato antigo:
+        Base64(nonce + ciphertext).
+
+        O formato antigo não utilizava AAD.
+        """
+
+        if self.chave_legada not in self.chaves:
+            raise ValueError("Chave legada não encontrada.")
+
+        pacote = self._decodificar_base64(token)
+
+        tamanho_minimo = (
+            self.TAMANHO_NONCE + self.TAMANHO_TAG
+        )
+
+        if len(pacote) < tamanho_minimo:
+            raise ValueError("Conteúdo incompleto.")
+
+        nonce = pacote[:self.TAMANHO_NONCE]
+
+        criptografado = pacote[self.TAMANHO_NONCE:]
+
+        aes = AESGCM(
+            self.chaves[self.chave_legada]
+        )
+
+        dados = aes.decrypt(
+            nonce,
+            criptografado,
             None
         )
 
-        resultado = nonce + dados_cifrados
+        return dados.decode("utf-8")
 
-        return base64.urlsafe_b64encode(resultado).decode("utf-8")
+    def rotacionar(self, token, contexto=None):
+        """
+        Descriptografa usando a chave antiga e criptografa
+        novamente usando a chave ativa.
+        """
 
-    def descriptografar(self, texto_cifrado):
-        if not isinstance(texto_cifrado, str):
-            raise TypeError("O texto cifrado precisa ser uma string.")
+        texto = self.descriptografar(
+            token,
+            contexto
+        )
 
-        try:
-            dados = base64.urlsafe_b64decode(texto_cifrado)
-
-            if len(dados) < self.TAMANHO_NONCE + 16:
-                raise ValueError("Dados cifrados invalidos.")
-
-            nonce = dados[:self.TAMANHO_NONCE]
-            conteudo = dados[self.TAMANHO_NONCE:]
-
-            texto_original = self.cifra.decrypt(
-                nonce,
-                conteudo,
-                None
-            )
-
-            return texto_original.decode("utf-8")
-
-        except Exception as erro:
-            raise ValueError(
-                "Nao foi possivel descriptografar. "
-                "A chave pode estar incorreta ou os dados foram alterados."
-            ) from erro
-
-
-def demonstracao_aes():
-    chave = CriptografiaAES.gerar_chave()
-
-    criptografia = CriptografiaAES(chave)
-
-    mensagem = "Teste de criptografia da Central de Demandas."
-
-    cifrado = criptografia.criptografar(mensagem)
-    original = criptografia.descriptografar(cifrado)
-
-    return {
-        "mensagem_original": mensagem,
-        "mensagem_cifrada": cifrado,
-        "mensagem_recuperada": original
-    }
-
-
-if __name__ == "__main__":
-    resultado = demonstracao_aes()
-
-    print("Mensagem original:")
-    print(resultado["mensagem_original"])
-
-    print("\nMensagem cifrada:")
-    print(resultado["mensagem_cifrada"])
-
-    print("\nMensagem recuperada:")
-    print(resultado["mensagem_recuperada"])
-```
+        return self.criptografar(
+            texto,
+            contexto
+        )
