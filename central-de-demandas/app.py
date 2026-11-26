@@ -386,16 +386,30 @@ def excluir_solicitacao():
 
     try:
         conexao = conectar_banco()
-        cursor = conexao.cursor()
-        # Remove mensagens ligadas antes de apagar a solicitação (integridade referencial)
-        cursor.execute("DELETE FROM mensagens WHERE id_solicitacao = (SELECT id_solicitacao FROM solicitacoes WHERE protocolo = %s)", (protocolo,))
-        cursor.execute("DELETE FROM solicitacoes WHERE protocolo = %s", (protocolo,))
+        cursor = conexao.cursor(dictionary=True)
+
+        cursor.execute("SELECT id_solicitacao FROM solicitacoes WHERE protocolo = %s", (protocolo,))
+        sol = cursor.fetchone()
+        if not sol:
+            return jsonify({"erro": "Solicitação não encontrada."}), 404
+
+        id_sol = sol['id_solicitacao']
+
+        # Apaga primeiro o que está ligado a ela (anexos, mensagens e histórico)
+        cursor.execute("DELETE FROM anexos WHERE id_solicitacao = %s", (id_sol,))
+        cursor.execute("DELETE FROM mensagens WHERE id_solicitacao = %s", (id_sol,))
+        cursor.execute("DELETE FROM historico_status WHERE id_solicitacao = %s", (id_sol,))
+
+        # Agora apaga a solicitação
+        cursor.execute("DELETE FROM solicitacoes WHERE id_solicitacao = %s", (id_sol,))
+
         conexao.commit()
         cursor.close()
         conexao.close()
         return jsonify({"mensagem": "Solicitação excluída com sucesso!"})
     except mysql.connector.Error as erro:
         return jsonify({"erro": f"Erro ao excluir: {erro}"}), 500
+
 
 @app.route('/atualizar-status', methods=['POST'])
 def atualizar_status():
