@@ -10,7 +10,12 @@
 
   <header id="global-header" class="topbar hidden">
     <div class="header-logo">
-      <img src="/static/LOGO IFPI.png">
+     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#164e33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+      <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+    </svg>
+
+
       <span>IFPI Central de Demandas da Coordenação</span>
     </div>
     <div class="nav-links">
@@ -45,7 +50,14 @@
     <div class="login-container">
       <div class="login-sidebar">
         <div class="logo">
-          <img src="LOGO IFPI.png" alt="Logo do IFPI" class="logo-img">
+        <span style="display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); padding: 8px; border-radius: 8px; margin-right: 12px;">
+         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+      </span>
+
+
           IFPI Campus Paulistana
         </div>
         <div class="hero-text">
@@ -274,7 +286,7 @@
                 </div>
               </div>
 
-              <div class="priority-result">
+              <div class="priority-result" style="display: none;">
                 <span>Prioridade calculada: </span>
                 <strong id="label-prioridade" style="color: #10b981;">Baixa</strong>
               </div>
@@ -315,7 +327,8 @@
               <input type="text" id="input-protocolo" placeholder="Ex: PROT-20261119-1234">
               <span style="font-size: 0.75rem; color: #6b7280; margin-top: 4px; display: block;">Digite o protocolo gerado ao enviar a solicitação</span>
             </div>
-            <button type="button" class="btn-submit" style="width: 110px; margin-top: 0;" onclick="buscarProtocolo()">Buscar</button>
+            <button type="button" onclick="buscarProtocolo()" style="align-self: flex-start; margin-top: 24px; height: 42px; padding: 0 1.6rem; background: #164e33; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer;">Buscar</button>
+
           </div>
  
             <!-- Lista automática dos protocolos do aluno logado -->
@@ -642,6 +655,18 @@
     <span id="toast-icone" style="font-size: 1.25rem;">✅</span>
     <span id="toast-texto">Mensagem aqui</span>
   </div>
+<!-- Modal Moderno para Edição e Confirmação -->
+<div id="modal-acao" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 10001; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: #ffffff; border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 440px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+    <h3 id="modal-acao-titulo" style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #0f172a;">Editar Solicitação</h3>
+    <p id="modal-acao-subtitulo" style="margin: 0 0 1rem 0; font-size: 0.88rem; color: #475569;">Altere a descrição abaixo:</p>
+    <textarea id="modal-acao-input" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.2rem; resize: vertical;"></textarea>
+    <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+      <button type="button" onclick="fecharModalAcao()" style="background: #f1f5f9; color: #475569; border: none; padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancelar</button>
+      <button type="button" id="modal-acao-confirmar" style="background: #15803d; color: #ffffff; border: none; padding: 0.55rem 1.2rem; border-radius: 8px; font-weight: 600; cursor: pointer;">Confirmar</button>
+    </div>
+  </div>
+</div>
 
   <script>
 
@@ -1037,37 +1062,84 @@
       }
     }
 
-    async function editarSolicitacao() {
-      const protocolo = document.getElementById('res-protocolo').innerText;
-      const atual = document.getElementById('res-descricao').innerText;
-      const nova = prompt('Digite a nova descrição da solicitação:', atual);
-      if (!nova || nova.trim() === '') return;
-
-      const resp = await fetch('/editar-solicitacao', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ protocolo, descricao: nova })
-      });
-      const dados = await resp.json();
-      alert(dados.mensagem || dados.erro);
-      if (resp.ok) buscarProtocolo();
+        function fecharModalAcao() {
+      document.getElementById('modal-acao').style.display = 'none';
     }
 
-    async function excluirSolicitacao() {
-      const protocolo = document.getElementById('res-protocolo').innerText;
-      if (!confirm(`Tem certeza que deseja excluir a solicitação ${protocolo}?`)) return;
+    function editarSolicitacao() {
+      const protocolo = document.getElementById('res-protocolo').innerText.trim();
+      const descAtual = document.getElementById('res-descricao').innerText.trim();
 
-      const resp = await fetch('/excluir-solicitacao', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ protocolo })
-      });
-      const dados = await resp.json();
-      alert(dados.mensagem || dados.erro);
-      if (resp.ok) {
-        document.getElementById('resultado-protocolo').classList.add('hidden');
-        document.getElementById('input-protocolo').value = '';
-      }
+      const modal = document.getElementById('modal-acao');
+      const titulo = document.getElementById('modal-acao-titulo');
+      const subtitulo = document.getElementById('modal-acao-subtitulo');
+      const input = document.getElementById('modal-acao-input');
+      const btnConfirmar = document.getElementById('modal-acao-confirmar');
+
+      titulo.innerText = '✏️ Editar Descrição da Solicitação';
+      subtitulo.innerText = `Protocolo: ${protocolo}`;
+      input.style.display = 'block';
+      input.value = descAtual;
+      btnConfirmar.innerText = 'Salvar Alteração';
+      btnConfirmar.style.background = '#15803d';
+
+      modal.style.display = 'flex';
+
+      btnConfirmar.onclick = async () => {
+        const novaDescricao = input.value.trim();
+        if (!novaDescricao) return;
+        fecharModalAcao();
+
+        const resp = await fetch('/editar-solicitacao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ protocolo, descricao: novaDescricao })
+        });
+        const dados = await resp.json();
+        if (resp.ok) {
+          mostrarToast(dados.mensagem || 'Descrição atualizada!');
+          buscarProtocolo();
+        } else {
+          mostrarToast(dados.erro || 'Erro ao editar.', 'erro');
+        }
+      };
+    }
+
+    function excluirSolicitacao() {
+      const protocolo = document.getElementById('res-protocolo').innerText.trim();
+      if (!protocolo) return;
+
+      const modal = document.getElementById('modal-acao');
+      const titulo = document.getElementById('modal-acao-titulo');
+      const subtitulo = document.getElementById('modal-acao-subtitulo');
+      const input = document.getElementById('modal-acao-input');
+      const btnConfirmar = document.getElementById('modal-acao-confirmar');
+
+      titulo.innerText = '🗑️ Excluir Solicitação';
+      subtitulo.innerText = `Tem certeza que deseja excluir permanentemente o protocolo ${protocolo}? Esta ação não pode ser desfeita.`;
+      input.style.display = 'none';
+      btnConfirmar.innerText = 'Sim, Excluir';
+      btnConfirmar.style.background = '#dc2626';
+
+      modal.style.display = 'flex';
+
+      btnConfirmar.onclick = async () => {
+        fecharModalAcao();
+        const resp = await fetch('/excluir-solicitacao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ protocolo })
+        });
+        const dados = await resp.json();
+        if (resp.ok) {
+          mostrarToast(dados.mensagem || 'Solicitação excluída com sucesso!');
+          document.getElementById('resultado-protocolo').classList.add('hidden');
+          document.getElementById('input-protocolo').value = '';
+          carregarMinhasSolicitacoes();
+        } else {
+          mostrarToast(dados.erro || 'Erro ao excluir.', 'erro');
+        }
+      };
     }
 
     async function enviarMensagemChat() {
@@ -1079,7 +1151,8 @@
       const resp = await fetch('/mensagens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_solicitacao, conteudo })
+        body: JSON.stringify({ id_solicitacao, conteudo, id_usuario: idUsuarioLogado })
+
       });
       if (resp.ok) {
         txtInput.value = '';
@@ -1087,27 +1160,69 @@
       }
     }
 
-    async function editarMensagem(id_mensagem, textoAtual) {
-      const novoTexto = prompt('Editar mensagem:', textoAtual);
-      if (!novoTexto || novoTexto.trim() === '') return;
+    function editarMensagem(id_mensagem, textoAtual) {
+      const modal = document.getElementById('modal-acao');
+      const titulo = document.getElementById('modal-acao-titulo');
+      const subtitulo = document.getElementById('modal-acao-subtitulo');
+      const input = document.getElementById('modal-acao-input');
+      const btnConfirmar = document.getElementById('modal-acao-confirmar');
 
-      const resp = await fetch('/mensagens/editar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_mensagem, conteudo: novoTexto })
-      });
-      if (resp.ok) buscarProtocolo();
+      titulo.innerText = '✏️ Editar Mensagem';
+      subtitulo.innerText = 'Altere o texto da sua mensagem abaixo:';
+      input.style.display = 'block';
+      input.value = textoAtual;
+      btnConfirmar.innerText = 'Salvar Mensagem';
+      btnConfirmar.style.background = '#15803d';
+
+      modal.style.display = 'flex';
+
+      btnConfirmar.onclick = async () => {
+        const novoTexto = input.value.trim();
+        if (!novoTexto) return;
+        fecharModalAcao();
+
+        const resp = await fetch('/mensagens/editar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_mensagem, conteudo: novoTexto })
+        });
+        if (resp.ok) {
+          mostrarToast('Mensagem atualizada!');
+          buscarProtocolo();
+        }
+      };
     }
 
-    async function excluirMensagem(id_mensagem) {
-      if (!confirm('Excluir esta mensagem?')) return;
-      const resp = await fetch('/mensagens/excluir', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_mensagem })
-      });
-      if (resp.ok) buscarProtocolo();
+    function excluirMensagem(id_mensagem) {
+      const modal = document.getElementById('modal-acao');
+      const titulo = document.getElementById('modal-acao-titulo');
+      const subtitulo = document.getElementById('modal-acao-subtitulo');
+      const input = document.getElementById('modal-acao-input');
+      const btnConfirmar = document.getElementById('modal-acao-confirmar');
+
+      titulo.innerText = '🗑️ Excluir Mensagem';
+      subtitulo.innerText = 'Tem certeza que deseja excluir esta mensagem?';
+      input.style.display = 'none';
+      btnConfirmar.innerText = 'Sim, Excluir';
+      btnConfirmar.style.background = '#dc2626';
+
+      modal.style.display = 'flex';
+
+      btnConfirmar.onclick = async () => {
+        fecharModalAcao();
+        const resp = await fetch('/mensagens/excluir', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_mensagem })
+        });
+        if (resp.ok) {
+          mostrarToast('Mensagem excluída!');
+          buscarProtocolo();
+        }
+      };
     }
+
+    
 
     function responderResolucao(resp) {
       const fb = document.getElementById('feedback-resolucao');
