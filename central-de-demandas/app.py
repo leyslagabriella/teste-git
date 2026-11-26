@@ -70,6 +70,32 @@ def listar_solicitacoes():
     except mysql.connector.Error as erro:
         return jsonify({"erro": f"Erro ao listar: {erro}"}), 500
 
+@app.route('/minhas-solicitacoes', methods=['GET'])
+def minhas_solicitacoes():
+    id_usuario = request.args.get('id_usuario', '').strip()
+    if not id_usuario:
+        return jsonify([])
+
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        sql = """
+            SELECT s.protocolo, s.titulo, s.prioridade,
+                   DATE_FORMAT(s.data_criacao, '%d/%m/%Y') AS data_criacao,
+                   COALESCE(st.nome, 'Recebido') AS nome_status
+            FROM solicitacoes s
+            LEFT JOIN status_solicitacao st ON s.id_status = st.id_status
+            WHERE s.id_usuario = %s
+            ORDER BY s.id_solicitacao DESC
+        """
+        cursor.execute(sql, (id_usuario,))
+        lista = cursor.fetchall()
+        cursor.close()
+        conexao.close()
+        return jsonify(lista)
+    except mysql.connector.Error as erro:
+        return jsonify({"erro": f"Erro ao buscar suas solicitações: {erro}"}), 500
+
 
 # ==========================================
 # FORMULÁRIO 1: LOGIN COM SEGURANÇA (HASH)
@@ -316,6 +342,17 @@ def buscar_protocolo():
         """, (resultado['id_solicitacao'],))
         resultado['anexos'] = cursor.fetchall()
 
+        # Busca as datas das etapas na tabela historico_status
+        cursor.execute("""
+            SELECT s.nome AS status_nome,
+                   DATE_FORMAT(h.data_alteracao, '%d/%m/%Y %H:%i') AS data_fmt
+            FROM historico_status h
+            JOIN status_solicitacao s ON h.id_status = s.id_status
+            WHERE h.id_solicitacao = %s
+            ORDER BY h.id_historico ASC
+        """, (resultado['id_solicitacao'],))
+        resultado['historico'] = cursor.fetchall()
+
         cursor.close()
         conexao.close()
         return jsonify(resultado)
@@ -359,6 +396,50 @@ def excluir_solicitacao():
         return jsonify({"mensagem": "Solicitação excluída com sucesso!"})
     except mysql.connector.Error as erro:
         return jsonify({"erro": f"Erro ao excluir: {erro}"}), 500
+
+@app.route('/atualizar-status', methods=['POST'])
+def atualizar_status():
+    dados = request.get_json()
+    protocolo = (dados.get('protocolo') or '').strip()
+    novo_status = (dados.get('status') or '').strip()
+
+    if not protocolo or not novo_status:
+        return jsonify({"erro": "Dados inválidos."}), 400
+
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+
+        # Busca o ID da solicitação
+        cursor.execute("SELECT id_solicitacao, id_usuario FROM solicitacoes WHERE protocolo = %s", (protocolo,))
+        sol = cursor.fetchone()
+        if not sol:
+            return jsonify({"erro": "Solicitação não encontrada."}), 404
+
+        # Busca ou cria o ID do status na tabela status_solicitacao
+        cursor.execute("SELECT id_status FROM status_solicitacao WHERE nome = %s", (novo_status,))
+        st = cursor.fetchone()
+        if st:
+            id_status = st['id_status']
+        else:
+            cursor.execute("INSERT INTO status_solicitacao (nome) VALUES (%s)", (novo_status,))
+            id_status = cursor.lastrowid
+
+        # Atualiza o status da solicitação e grava data/hora no historico_status
+        agora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("UPDATE solicitacoes SET id_status = %s WHERE id_solicitacao = %s", (id_status, sol['id_solicitacao']))
+        cursor.execute("""
+            INSERT INTO historico_status (id_solicitacao, id_status, data_alteracao, id_usuario)
+            VALUES (%s, %s, %s, %s)
+        """, (sol['id_solicitacao'], id_status, agora, sol['id_usuario']))
+
+        conexao.commit()
+        cursor.close()
+        conexao.close()
+        return jsonify({"mensagem": "Status atualizado com sucesso!"})
+    except mysql.connector.Error as erro:
+        return jsonify({"erro": f"Erro ao atualizar status: {erro}"}), 500
+
 
 # ==========================================
 # TABELA 2 (MENSAGENS): CADASTRAR, EDITAR E EXCLUIR
@@ -428,3 +509,4 @@ def index():
 if __name__ == '__main__':
     inicializar_usuario_padrao()
     app.run(debug=True)
+
