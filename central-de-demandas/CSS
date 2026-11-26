@@ -309,3 +309,22 @@ footer { background-color: var(--primary-color); color: white; text-align: cente
   color: #dc2626 !important;
   border-color: #fca5a5 !important;
 }
+/* Retoques modernos na Página Inicial */
+#dashboard-page .action-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+#dashboard-page .action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  border-color: #86efac;
+}
+
+#dashboard-page .stats-banner,
+#dashboard-page .kpi-banner {
+  background: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%) !important;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px rgba(20, 83, 45, 0.22);
+}
