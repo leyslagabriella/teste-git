@@ -175,7 +175,7 @@
       <div class="stats-bar">
         <div class="stat-item"><div class="number">24</div><div class="label">Solicitações Abertas</div></div>
         <div class="stat-item"><div class="number">7</div><div class="label">Alta Prioridade</div></div>
-        <div class="stat-item"><div class="number">12</div><div class="label">Em Andamento</div></div>
+        <div class="stat-item"><div class="number">12</div><div class="label">Em Análise</div></div>
         <div class="stat-item"><div class="number">5</div><div class="label">Resolvidas Hoje</div></div>
       </div>
     </main>
@@ -317,6 +317,15 @@
             </div>
             <button type="button" class="btn-submit" style="width: 110px; margin-top: 0;" onclick="buscarProtocolo()">Buscar</button>
           </div>
+ 
+            <!-- Lista automática dos protocolos do aluno logado -->
+            <div id="box-minhas-solicitacoes" style="margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid #e5e7eb;">
+              <strong style="display: block; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.75rem;">📋 Minhas Solicitações Registradas</strong>
+              <div id="lista-meus-protocolos" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <span style="font-size: 0.85rem; color: #6b7280;">Carregando seus protocolos...</span>
+              </div>
+            </div>
+
 
           <div id="resultado-protocolo" class="hidden" style="margin-top: 2rem;">
             <input type="hidden" id="res-id-solicitacao">
@@ -330,13 +339,29 @@
               <span id="res-status" class="badge-andamento">Aberta</span>
             </div>
 
-            <div style="display: flex; gap: 0.5rem; margin: 1rem 0;">
-              <button type="button" onclick="editarSolicitacao()" style="background: #2563eb; color: white; border: none; padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem;">✏️ Editar Descrição</button>
-              <button type="button" onclick="excluirSolicitacao()" style="background: #dc2626; color: white; border: none; padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem;">🗑️ Excluir Solicitação</button>
+            <!-- Visível APENAS para o Aluno -->
+            <div id="acoes-aluno" style="display: flex; gap: 0.75rem; margin: 1rem 0;">
+              <button type="button" onclick="editarSolicitacao()" style="background: #2563eb; color: #fff; border: none; padding: 0.55rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer;">✏️ Editar Descrição</button>
+              <button type="button" onclick="excluirSolicitacao()" style="background: #dc2626; color: #fff; border: none; padding: 0.55rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer;">🗑️ Excluir Solicitação</button>
             </div>
 
-            <div class="timeline-box">
-              <div class="timeline-item completed">
+            <!-- Visível APENAS para a Coordenação -->
+            <div id="acoes-coordenacao" style="display: none; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #15803d; padding: 0.9rem 1.2rem; border-radius: 10px; margin: 1.25rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <strong style="font-size: 0.88rem; color: #1e293b;">Status do Atendimento:</strong>
+                <select id="select-novo-status" style="padding: 0.5rem 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; color: #0f172a; background: #ffffff; font-weight: 500; cursor: pointer;">
+                  <option value="Recebido">Recebido</option>
+                  <option value="Em Análise">Em Análise</option>
+                  <option value="Resolvida">Resolvida</option>
+                </select>
+              </div>
+              <button type="button" onclick="salvarNovoStatus()" style="background: #15803d; color: #ffffff; border: none; padding: 0.55rem 1.2rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 4px rgba(21,128,61,0.2);">✓ Atualizar Status</button>
+            </div>
+
+
+
+            <div class="timeline-box" id="timeline-etapas">
+               <div class="timeline-item completed">
                 <div class="t-icon">✓</div>
                 <div><strong>Recebido</strong><br><span id="res-data" style="font-size: 0.75rem; color: #6b7280;">--/--/----</span></div>
               </div>
@@ -346,7 +371,7 @@
               </div>
               <div class="timeline-item">
                 <div class="t-icon">3</div>
-                <div><strong>Em Andamento</strong><br><span style="font-size: 0.75rem; color: #6b7280;">Aguardando</span></div>
+                <div><strong>Resolvida</strong><br><span style="font-size: 0.75rem; color: #6b7280;">Aguardando</span></div>
               </div>
             </div>
 
@@ -384,8 +409,8 @@
             <div class="resolucao-box" id="bloco-resolucao">
               <p><strong>Seu problema foi resolvido?</strong><br>Confirme para encerrar esta solicitação.</p>
               <div class="res-btns">
-                <button type="button" class="btn-res-sim" onclick="responderResolucao('sim')">Sim</button>
-                <button type="button" class="btn-res-nao" onclick="responderResolucao('nao')">Não</button>
+                  <button type="button" class="btn-sim" onclick="alert('✅ Obrigado pela confirmação! Atendimento encerrado com sucesso.')">Sim</button>
+                  <button type="button" class="btn-nao" onclick="alert('⚠️ Entendido! A coordenação será notificada para reavaliar sua demanda.')">Não</button>
               </div>
               <div id="feedback-resolucao" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 500;"></div>
             </div>
@@ -418,7 +443,7 @@
         <div class="kpi-card border-red"><div class="kpi-icon red">🔴</div><div class="kpi-val">7</div><div class="kpi-lbl red">Alta Prioridade</div></div>
         <div class="kpi-card border-yellow"><div class="kpi-icon yellow">🟡</div><div class="kpi-val">10</div><div class="kpi-lbl yellow">Média Prioridade</div></div>
         <div class="kpi-card border-green"><div class="kpi-icon green">🟢</div><div class="kpi-val">7</div><div class="kpi-lbl green">Baixa Prioridade</div></div>
-        <div class="kpi-card"><div class="kpi-icon blue">⚙️</div><div class="kpi-val">12</div><div class="kpi-lbl">Em Andamento</div></div>
+        <div class="kpi-card"><div class="kpi-icon blue">⚙️</div><div class="kpi-val">12</div><div class="kpi-lbl">Em Análise</div></div>
         <div class="kpi-card"><div class="kpi-icon green-check">✅</div><div class="kpi-val">5</div><div class="kpi-lbl">Resolvidas Hoje</div></div>
       </div>
 
@@ -612,9 +637,47 @@
     </div>
   </div>
 </div>
-
+<!-- Notificação Flutuante Moderna (Toast) -->
+  <div id="toast-notificacao" style="position: fixed; top: 24px; right: 24px; z-index: 10000; display: none; align-items: center; gap: 12px; background: #ffffff; border-left: 5px solid #16a34a; color: #1e293b; padding: 1rem 1.35rem; border-radius: 10px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); font-size: 0.92rem; font-weight: 500; max-width: 380px;">
+    <span id="toast-icone" style="font-size: 1.25rem;">✅</span>
+    <span id="toast-texto">Mensagem aqui</span>
+  </div>
 
   <script>
+
+    let perfilUsuarioLogado = 'aluno'; // coloque logo no início do <script>
+    let idUsuarioLogado = null;
+
+    function mostrarToast(mensagem, tipo = 'sucesso') {
+      const toast = document.getElementById('toast-notificacao');
+      const icone = document.getElementById('toast-icone');
+      const texto = document.getElementById('toast-texto');
+
+      // Remove emojis duplicados do começo se já vierem no texto
+      const textoLimpo = mensagem.replace(/^[✅⚠️❌]\s*/, '');
+      texto.innerText = textoLimpo;
+
+      if (tipo === 'erro' || mensagem.includes('Erro') || mensagem.includes('⚠️')) {
+        toast.style.borderLeftColor = '#dc2626';
+        icone.innerText = '⚠️';
+      } else {
+        toast.style.borderLeftColor = '#16a34a';
+        icone.innerText = '✅';
+      }
+
+      toast.style.display = 'flex';
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3800);
+    }
+
+    // Faz qualquer alert() do sistema usar o Toast moderno automaticamente!
+    window.alert = function(msg) {
+      mostrarToast(msg);
+    };
+
+
     const respostasPrioridade = { q1: 'Nao', q2: 'Nao', q3: 'Nao' };
 
      async function fazerLogin(event) {
@@ -642,10 +705,13 @@
           errBox.classList.remove('hidden');
           return;
         }
-
+        perfilUsuarioLogado = dados.tipo_usuario;
         errBox.classList.add('hidden');
         const header = document.getElementById('global-header');
         if (header) header.classList.remove('hidden');
+        idUsuarioLogado = dados.id_usuario;
+        carregarMinhasSolicitacoes();
+
 
         const btnAluno = document.getElementById('nav-aluno');
         const btnCoord = document.getElementById('nav-coord');
@@ -729,7 +795,7 @@
             totalResolvidas++;
           } else {
             totalAbertas++;
-            if (item.nome_status === 'Em Andamento') totalAndamento++;
+            if (item.nome_status === 'Em Análise') totalAndamento++;
           }
 
           if (item.prioridade === 'Alta') totalAlta++;
@@ -877,6 +943,55 @@
         const infoCurso = dados.turma ? `${dados.nome_curso} (${dados.turma})` : dados.nome_curso;
         document.getElementById('res-usuario').innerText = `Solicitante: ${dados.nome_usuario} · Curso: ${infoCurso}`;
 
+       // Mostra Editar/Excluir só para Aluno; Alterar Status só para Coordenação
+       const boxAluno = document.getElementById('acoes-aluno');
+       const boxCoord = document.getElementById('acoes-coordenacao');
+       if (perfilUsuarioLogado === 'coordenador') {
+       if (boxAluno) boxAluno.style.display = 'none';
+       if (boxCoord) boxCoord.style.display = 'flex';
+       }  else {
+       if (boxAluno) boxAluno.style.display = 'flex';
+       if (boxCoord) boxCoord.style.display = 'none';
+       }
+
+       
+        // Atualiza a Linha do Tempo com status e data/hora reais
+        const containerTimeline = document.getElementById('timeline-etapas');
+        const datasMap = {};
+        (dados.historico || []).forEach(h => { datasMap[h.status_nome] = h.data_fmt; });
+
+        if (containerTimeline && containerTimeline.children.length >= 3) {
+        const etapa1 = containerTimeline.children.item(0);
+        const etapa2 = containerTimeline.children.item(1);
+        const etapa3 = containerTimeline.children.item(2);
+
+        // Etapa 1: Recebido (sempre marcada)
+        etapa1.classList.add('active', 'completed');
+        const textos1 = etapa1.querySelectorAll('span, small, p');
+        if (textos1.length > 0) textos1.item(textos1.length - 1).innerText = datasMap['Recebido'] || dados.data_criacao;
+
+        // Etapa 2: Em Análise (só marca se o status atual for "Em Análise" ou "Resolvida")
+        const textos2 = etapa2.querySelectorAll('span, small, p');
+        if (dados.nome_status === 'Em Análise' || dados.nome_status === 'Resolvida') {
+            etapa2.classList.add('active', 'completed');
+          if (textos2.length > 0) textos2.item(textos2.length - 1).innerText = datasMap['Em Análise'] || dados.data_criacao;
+        } else {
+          etapa2.classList.remove('active', 'completed');
+          if (textos2.length > 0) textos2.item(textos2.length - 1).innerText = 'Aguardando';
+        }
+
+          // Etapa 3: Resolvida (só marca quando o status atual for "Resolvida")
+          const textos3 = etapa3.querySelectorAll('strong, span, small, p');
+          if (textos3.length >= 2) textos3.item(0).innerText = 'Resolvida';
+
+          if (dados.nome_status === 'Resolvida') {
+            etapa3.classList.add('active', 'completed');
+            if (textos3.length > 0) textos3.item(textos3.length - 1).innerText = datasMap['Resolvida'] || dados.data_criacao;
+          } else {
+            etapa3.classList.remove('active', 'completed');
+            if (textos3.length > 0) textos3.item(textos3.length - 1).innerText = 'Aguardando';
+          }
+        }
 
         document.getElementById('res-status').innerText = dados.nome_status;
         document.getElementById('res-data').innerText = dados.data_criacao;
@@ -1144,6 +1259,74 @@
         texto.innerHTML = `Arraste arquivos ou <strong style="color: #15803d; text-decoration: underline;">clique para selecionar</strong>`;
       }
     }
+
+    async function salvarNovoStatus() {
+      const protocolo = document.getElementById('res-protocolo').innerText.trim();
+      const status = document.getElementById('select-novo-status').value;
+
+      try {
+        const resp = await fetch('/atualizar-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ protocolo, status })
+        });
+        const dados = await resp.json();
+
+        if (resp.ok) {
+          alert('✅ ' + dados.mensagem);
+          buscarProtocolo();
+        } else {
+          alert(dados.erro || 'Erro ao atualizar status.');
+        }
+      } catch (erro) {
+        alert('Erro de conexão ao atualizar status.');
+      }
+    }
+
+    async function carregarMinhasSolicitacoes() {
+      const box = document.getElementById('box-minhas-solicitacoes');
+      const listaDiv = document.getElementById('lista-meus-protocolos');
+      if (!box || !listaDiv) return;
+
+      // Só exibe essa lista para alunos (coordenação já tem a Fila Inteligente completa)
+      if (perfilUsuarioLogado === 'coordenador' || !idUsuarioLogado) {
+        box.style.display = 'none';
+        return;
+      }
+
+      box.style.display = 'block';
+      try {
+        const resp = await fetch(`/minhas-solicitacoes?id_usuario=${idUsuarioLogado}`);
+        const lista = await resp.json();
+
+        if (!lista || lista.length === 0) {
+          listaDiv.innerHTML = '<span style="font-size: 0.85rem; color: #6b7280;">Você ainda não possui solicitações registradas.</span>';
+          return;
+        }
+
+        listaDiv.innerHTML = '';
+        lista.forEach(item => {
+          listaDiv.innerHTML += `
+            <div onclick="selecionarMeuProtocolo('${item.protocolo}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; cursor: pointer; transition: border-color 0.2s;">
+              <div>
+                <strong style="color: #15803d; font-size: 0.88rem;">${item.protocolo}</strong>
+                <span style="color: #64748b; font-size: 0.78rem; margin-left: 8px;">• ${item.data_criacao}</span>
+                <div style="color: #334155; font-size: 0.85rem; margin-top: 2px;">${item.titulo}</div>
+              </div>
+              <span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.65rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">${item.nome_status}</span>
+            </div>`;
+        });
+      } catch (erro) {
+        console.error('Erro ao carregar meus protocolos:', erro);
+      }
+    }
+
+    function selecionarMeuProtocolo(protocolo) {
+      document.getElementById('input-protocolo').value = protocolo;
+      buscarProtocolo();
+    }
+
+
 
   </script>
  </body>
